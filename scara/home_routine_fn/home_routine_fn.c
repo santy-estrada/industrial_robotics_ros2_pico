@@ -193,7 +193,7 @@ int main()
 
     // Home Routine: Move motors to touch all limit switches
     // 8% PWM speed
-    int pwm_speed_percent = 6;
+    int pwm_speed_percent = 8;
 #endif
 
     gpio_put(LED_PIN, 1); // Turn on the onboard LED to indicate the program is running
@@ -519,8 +519,10 @@ int main()
         // Stop Motor 2 - FC_2L touched
         stop_pwm(PWMA_1);
         stop_pwm(PWMB_1);
+        stop_motor(motor2);
         printf("*** FC_2L ACTIVATED *** Motor 2 stopped. Ticks: %d\n", get_encoderM2_ticks());
         sleep_ms(1000);
+
         
         // Motor 2 - Toggle direction (towards FC_2R)
         printf("Motor 2: Toggling direction towards FC_2R...\n");
@@ -554,6 +556,7 @@ int main()
         // Stop Motor 2 - FC_2R touched
         stop_pwm(PWMA_1);
         stop_pwm(PWMB_1);
+        stop_motor(motor2);
         printf("*** FC_2R ACTIVATED *** Motor 2 stopped. Final ticks: %d\n", get_encoderM2_ticks());
         sleep_ms(1000);
 
@@ -585,6 +588,7 @@ int main()
         // Stop Motor 2 - Center reached
         stop_pwm(PWMA_1);
         stop_pwm(PWMB_1);
+        stop_motor(motor2);
         sleep_ms(1000);
 
         printf("=== Motor 2 Homing Complete (T3) ===\n\n");
@@ -623,6 +627,7 @@ int main()
         // Stop Motor 1 - FC_1L touched
         stop_pwm(PWMA_1);
         stop_pwm(PWMB_1);
+        stop_motor(motor1);
         encoderM1_ticks = 0;
         rangeM1 = 0;
         printf("Range M1: %d\n", rangeM1);
@@ -662,6 +667,7 @@ int main()
         midPoint1 = rangeM1 / 2;
 
         printf("Range M1: %d\n", rangeM1);
+        stop_motor(motor1);
 
         printf("*** FC_1R ACTIVATED *** Motor 1 stopped. Final ticks: %d\n", get_encoderM1_ticks());
         sleep_ms(1000);
@@ -696,6 +702,7 @@ int main()
         }
         printf("Reached cont: %d\n", cont);
         // Stop Motor 1 - Center reached
+        stop_motor(motor1);
         stop_pwm(PWMA_1);
         stop_pwm(PWMB_1);
 

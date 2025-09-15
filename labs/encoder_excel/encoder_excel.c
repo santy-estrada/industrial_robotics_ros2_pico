@@ -9,30 +9,51 @@
 // #define debug
 #define motor
 // #define pot
-#define reaction_curve
+// #define reaction_curve
+#define pololu_test
+// #define microgear_test
 
-#define MOTOR_PIN 17   // GPIO pin connected to the DC motor
+// #define CHA_M1 12
+// #define CHB_M1 13
+// #define CHA_M2 14
+// #define CHB_M2 15
+// #define PWMA_1 16
+// #define INA1_1 17
+// #define INA2_1 18
+// #define INB1_1 19
+// #define INB2_1 20
+// #define PWMB_1 21
+
+#define MOTOR_PIN 21   // GPIO pin connected to the DC motor
 #define MOTOR_IN2 20  // GPIO pin connected to the DC motor CCW
-#define MOTOR_IN1 21  // GPIO pin connected to the DC motor CW
+#define MOTOR_IN1 19  // GPIO pin connected to the DC motor CW
 
 #define LED_PIN 25    // GPIO pin connected to the onboard LED
 
 // GPIO pins for encoder
-const uint ENCODER_A_PIN = 15; // Encoder A signal
-const uint ENCODER_B_PIN = 14; // Encoder B signal
+const uint ENCODER_A_PIN = 14; // Encoder A signal
+const uint ENCODER_B_PIN = 15; // Encoder B signal
 
 // Potentiometer pin
 const uint POT_PIN = 26; // GPIO pin connected to the potentiometer
 
 // Encoder and motor parameters
-const int TICKS_PER_REV = 28; // Encoder resolution (ticks per revolution)
-const float GEAR_RATIO = 150.0f; // Gear ratio
+#ifdef microgear_test
+const int TICKS_PER_REV = 28; // Encoder resolution for microgear motor
+const float GEAR_RATIO = 150.0f; // Gear ratio for microgear motor
+#elif defined(pololu_test)
+const int TICKS_PER_REV = 64; // Encoder resolution for Pololu motor  
+const float GEAR_RATIO = 50.0f; // Gear ratio for Pololu motor
+#else
+const int TICKS_PER_REV = 64; // Encoder resolution (ticks per revolution) 28 for microgear; 64 for pololu
+const float GEAR_RATIO = 50.0f; // Gear ratio 150.0f for microgear; 50.0f for pololu
+#endif
 
 volatile int32_t encoder_ticks = 0; // Store the number of encoder tick
 
 // Speed calculation variables
 int32_t last_ticks = 0;
-float dt = 0.1f; // Time interval in seconds (adjust as needed)
+float dt = 0.05f; // Time interval in seconds (adjust as needed)
 float rpm = 0.0f;
 int percentage = 0; // Percentage of speed (0-100)
 // Low-pass filter variables (same as uros code)
@@ -60,15 +81,15 @@ void encoder_a_irq_handler(uint gpio, uint32_t events) {
     // Count rising and falling edges of both A and B channels
     if (gpio == ENCODER_A_PIN) {
         if ((encoder_a && !encoder_b) || (!encoder_a && encoder_b)) {
-            encoder_ticks++;  // Forward direction
-        } else {
-            encoder_ticks--;  // Reverse direction
-        }
-    } else {
-        if ((encoder_a && !encoder_b) || (!encoder_a && encoder_b)) {
             encoder_ticks--;  // Forward direction
         } else {
             encoder_ticks++;  // Reverse direction
+        }
+    } else {
+        if ((encoder_a && !encoder_b) || (!encoder_a && encoder_b)) {
+            encoder_ticks++;  // Forward direction
+        } else {
+            encoder_ticks--;  // Reverse direction
         }
     }
 
@@ -160,14 +181,20 @@ int main() {
     int pot_value = 0;
 #endif
 
-#ifdef reaction_curve
+#ifdef microgear_test
+    int step_duration = 15000; // Duration of each step in milliseconds (15 seconds for microgear)
+#elif defined(pololu_test)
+    int step_duration = 10000; // Duration of each step in milliseconds (10 seconds for Pololu)
+#elif defined(reaction_curve)
     int step_duration = 15000; // Duration of each step in milliseconds
 #else
     int duration = 2000; // Duration of each step in milliseconds
 #endif
 
-#ifdef reaction_curve
+#ifdef microgear_test
     sleep_ms(20000);    // Wait 20 seconds (time to connect everything)
+#elif defined(pololu_test)
+    sleep_ms(15000);    // Wait 15 seconds (time to connect everything) 
 #endif
     while (1) {
         current_time = to_ms_since_boot(get_absolute_time());
@@ -208,8 +235,8 @@ int main() {
 #ifdef motor
         if (current_time - last_time_vel >= dt*1000) {
 
-        #ifdef reaction_curve
-        //Reaction curve of the motor: 4 Steps (from 0 to 25, from 25 to 50, from 50 to 75, from 75 to 100). Each step lasts 10 seconds.
+        #ifdef microgear_test
+        //Reaction curve of the microgear motor: 8 Steps (0->25->50->75->100->75->50->25->0). Each step lasts 15 seconds.
             gpio_put(MOTOR_IN1, 1);
             gpio_put(MOTOR_IN2, 0);
             if (step == 1){
@@ -344,9 +371,41 @@ int main() {
                 sleep_ms(5000);
                 step = 1;
             }
-        #endif
+        
+        #elif defined(pololu_test)
+        //Pololu motor test: Steps of 10% from 0 to 60% and back to 0 (0->10->20->30->40->50->60->50->40->30->20->10->0). Each step lasts 10 seconds.
+            gpio_put(MOTOR_IN1, 1);
+            gpio_put(MOTOR_IN2, 0);
+            
+            int pwm_levels[] = {0, 1250, 2500, 3750, 5000, 6250, 7500, 6250, 5000, 3750, 2500, 1250, 0}; // PWM values for 0%, 10%, 20%, ..., 60%, ..., 10%, 0%
+            int percentages[] = {0, 10, 20, 30, 40, 50, 60, 50, 40, 30, 20, 10, 0}; // Corresponding percentages
+            
+            if (step >= 1 && step <= 13) {
+                int index = step - 1; // Convert step to array index (0-12)
+                pwm_set_chan_level(slice_num, pwm_gpio_to_channel(MOTOR_PIN), pwm_levels[index]);
+                percentage = percentages[index];
+                
+                #ifdef debug
+                    printf("Step %d: %d%% duty cycle\n", step, percentage);
+                    printf("Encoder ticks: %d\n", get_encoder_ticks());
+                #endif
+                
+                // Calculate speed (RPM) - same as uros implementation
+                ticks_since_last = encoder_ticks - last_ticks;
+                last_ticks = encoder_ticks;
+                float raw_rpm = ((float)ticks_since_last / TICKS_PER_REV) * (60.0f / dt) * (1.0f / GEAR_RATIO);
+                rpm = apply_low_pass_filter(raw_rpm);
+                
+                #ifdef debug
+                    printf("Speed (RPM): %.2f\n", rpm);
+                #endif
+            } else {
+                sleep_ms(5000);
+                step = 1;
+            }
 
-        #ifndef reaction_curve
+        #else
+        // Default test (original bidirectional test)
             if (step == 1){
                 gpio_put(MOTOR_IN1, 1);
                 gpio_put(MOTOR_IN2, 0);
@@ -447,7 +506,8 @@ int main() {
             {
                 step = 0;
             }
-        #endif // reaction_curve
+        #endif // End of test type conditions
+            
             last_time_vel = current_time;
             
         #ifndef debug

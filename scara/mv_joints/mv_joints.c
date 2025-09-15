@@ -46,7 +46,7 @@ const uint motor2[3] ={INB1_1, INB2_1, 1};
 // Global variables for control
 int current_mode = 0;  // 0 = no mode selected
 int current_servo_angle = 7;  // Start at middle position (7.5 degrees average)
-int pwm_speed_percent = 5;  // 5% PWM speed for motors
+int pwm_speed_percent = 6;  // 5% PWM speed for motors
 
 // Function to get the current encoder tick count
 int32_t get_encoderM1_ticks() {
