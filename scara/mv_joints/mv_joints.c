@@ -13,7 +13,7 @@
 
 #define FC_1L 6
 #define FC_1R 7
-#define FC_2L 8
+#define  FC_2L 8
 #define FC_2R 9
 #define CHA_M1 12
 #define CHB_M1 13

@@ -6,6 +6,12 @@
 #include "hardware/adc.h"
 #include <math.h>
 
+#define CHA_M1 12
+#define CHB_M1 13
+#define PWMA_1 16
+#define INA2_1 17
+#define INA1_1 18
+
 #define debug
 #define motor
 #define pid_controller
@@ -22,8 +28,8 @@ const uint ENCODER_A_PIN = 14; // Encoder A signal
 const uint ENCODER_B_PIN = 15; // Encoder B signal
 
 // Encoder and motor parameters
-const int TICKS_PER_REV = 64; // Encoder resolution (ticks per revolution)
-const float GEAR_RATIO = 50.0f; // Gear ratio
+const int TICKS_PER_REV = 28; // Encoder resolution (ticks per revolution)
+const float GEAR_RATIO = 150.0f; // Gear ratio
 
 volatile int32_t encoder_ticks = 0; // Store the number of encoder tick
 
@@ -66,8 +72,8 @@ float calculate_pid_control(float setpoint_rpm, float measured_rpm) {
     // u(k) = q0*e(k) + q1*e(k-1) + q2*e(k-2) + u(k-1)
     control_output = q0 * error[0] + q1 * error[1] + q2 * error[2] + control_output;
 
-    // Limit control output to [0, 100] percentage
-    if (control_output > 100.0f) control_output = 100.0f;
+    // Limit control output to [0, 80] percentage
+    if (control_output > 80.0f) control_output = 80.0f;
     if (control_output < 0.0f) control_output = 0.0f;
     
     return control_output;
@@ -120,6 +126,14 @@ void init_encoder() {
     gpio_set_dir(ENCODER_B_PIN, GPIO_IN);
     gpio_pull_up(ENCODER_B_PIN);
 
+    gpio_init(CHA_M1);
+    gpio_set_dir(CHA_M1, GPIO_IN);
+    gpio_pull_up(CHA_M1);
+    // Initialize the GPIO pins connected to the encoder
+    gpio_init(CHB_M1);
+    gpio_set_dir(CHB_M1, GPIO_IN);
+    gpio_pull_up(CHB_M1);
+
     // Attach interrupt on encoder A pin (rising and falling edge)
     gpio_set_irq_enabled_with_callback(ENCODER_A_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &encoder_a_irq_handler);
     gpio_set_irq_enabled_with_callback(ENCODER_B_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &encoder_a_irq_handler);
@@ -146,6 +160,13 @@ int main() {
 
     gpio_init(MOTOR_IN2);
     gpio_set_dir(MOTOR_IN2, GPIO_OUT); 
+
+    gpio_init(INA2_1);
+    gpio_set_dir(INA2_1, GPIO_OUT);
+    
+
+    gpio_init(INA1_1);
+    gpio_set_dir(INA1_1, GPIO_OUT); 
     
     
     // Set the GPIO pin function to PWM
@@ -165,6 +186,24 @@ int main() {
     
     // Enable PWM output on the slice
     pwm_set_enabled(slice_num, true);
+
+        // Set the GPIO pin function to PWM
+    gpio_set_function(PWMA_1, GPIO_FUNC_PWM);
+    
+    // Get the PWM slice number associated with the GPIO pin
+    uint slice_num2 = pwm_gpio_to_slice_num(PWMA_1);
+    
+    // Set the wrap value for a 10 kHz PWM signal (calculated wrap = 12499)
+    // PWM frequency = 125 MHz / wrap / 2
+    // 12499 = 125000000 / 10000 / 2
+    // 10 kHz PWM signal for a DC motor driver (L298N)
+    pwm_set_wrap(slice_num2, 12499);
+    
+    // Start with a 0 % duty cycle
+    pwm_set_chan_level(slice_num2, pwm_gpio_to_channel(PWMA_1), 0);
+    
+    // Enable PWM output on the slice
+    pwm_set_enabled(slice_num2, true);
 
     // Initialize the encoder
     init_encoder();
@@ -194,7 +233,7 @@ int main() {
             if (phase > 3) phase = 0;
             last_time_step = current_time;
 
-            setpoint_percentage = phase * 15.0f + 10.0f; // Setpoint changes in steps of 15% (10%, 25%, 40%, 55%)
+            setpoint_percentage = phase * 5.0f + 10.0f; // Setpoint changes in steps of 5% (10%, 15%, 20%, 25%)
         }
 #endif
 
@@ -202,9 +241,11 @@ int main() {
         if (current_time - last_time_vel >= dt*1000) {
 
             // PID Controller implementation
-            gpio_put(MOTOR_IN1, 1);
-            gpio_put(MOTOR_IN2, 0);
-            
+            gpio_put(MOTOR_IN1, 0);
+            gpio_put(MOTOR_IN2, 1);
+            gpio_put(INA1_1, 0);
+            gpio_put(INA2_1, 1);
+
             // Calculate speed (RPM) - same as previous implementation
             ticks_since_last = encoder_ticks - last_ticks;
             last_ticks = encoder_ticks;
@@ -220,6 +261,8 @@ int main() {
             // Apply control output to motor
             uint16_t pwm_value = percentage_to_pwm(pid_output);
             pwm_set_chan_level(slice_num, pwm_gpio_to_channel(MOTOR_PIN), pwm_value);
+            pwm_set_chan_level(slice_num2, pwm_gpio_to_channel(PWMA_1), pwm_value);
+
             
             percentage = (int)pid_output; // Store for logging
             
