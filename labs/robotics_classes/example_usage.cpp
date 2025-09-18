@@ -8,10 +8,10 @@
 
 // Test configuration defines - comment/uncomment to enable/disable tests
 #define TEST_MOTOR
-#define TEST_PRECISION_MOTOR
-#define TEST_LIGHT_SENSOR
-#define TEST_ULTRASONIC_SENSOR
-#define TEST_LIMIT_SWITCH
+// #define TEST_PRECISION_MOTOR
+// #define TEST_LIGHT_SENSOR
+// #define TEST_ULTRASONIC_SENSOR
+// #define TEST_LIMIT_SWITCH
 #define TEST_PRESSURE_SENSOR
 
 // Example usage of the motor and sensor classes
@@ -42,7 +42,8 @@ int main() {
 
 #ifdef TEST_MOTOR
     // Create a simple motor
-    Motor simple_motor(0, 1, 2);  // ENA=0, IN1=1, IN2=2
+    Motor simple_motor1(0, 1, 2);  // ENA=0, IN1=1, IN2=2
+    Motor simple_motor2(3, 4, 5);  // ENA=3, IN1=4, IN2=5
 #endif
     
 #ifdef TEST_PRECISION_MOTOR
@@ -54,12 +55,27 @@ int main() {
     printf("Components initialized successfully!\n");
     
 #ifdef TEST_MOTOR
-    // Test simple motor
-    simple_motor.moveFwd(50.0f);  // Move forward at 50% power
+    // Test simple motor1
+    simple_motor1.moveFwd(50.0f);  // Move forward at 50% power
     sleep_ms(2000);
-    simple_motor.moveBckwd(30.0f); // Move backward at 30% power
+    simple_motor1.moveBckwd(30.0f); // Move backward at 30% power
     sleep_ms(2000);
-    simple_motor.stop();
+    simple_motor1.stop();
+    sleep_ms(1000);
+    // Test simple motor2
+    simple_motor2.moveFwd(50.0f);  // Move forward at 70% power
+    sleep_ms(2000);
+    simple_motor2.moveBckwd(20.0f); // Move backward at 20% power
+    sleep_ms(2000);
+    simple_motor2.stop();
+    sleep_ms(1000);
+    //Test both motors together
+    simple_motor1.moveFwd(60.0f);
+    simple_motor2.moveFwd(60.0f);
+    sleep_ms(2000);
+    simple_motor1.stop();
+    simple_motor2.stop();
+    sleep_ms(1000); 
 #endif
     
     // Main testing loop with separated timing
