@@ -11,15 +11,15 @@
 #define pid_controller
 #define step
 
-#define MOTOR_PIN 21   // GPIO pin connected to the DC motor
-#define MOTOR_IN2 20  // GPIO pin connected to the DC motor CCW
-#define MOTOR_IN1 19  // GPIO pin connected to the DC motor CW
+#define MOTOR_PIN 16   // GPIO pin connected to the DC motor
+#define MOTOR_IN2 18  // GPIO pin connected to the DC motor CCW
+#define MOTOR_IN1 17  // GPIO pin connected to the DC motor CW
 
 #define LED_PIN 25    // GPIO pin connected to the onboard LED
 
 // GPIO pins for encoder
-const uint ENCODER_A_PIN = 14; // Encoder A signal
-const uint ENCODER_B_PIN = 15; // Encoder B signal
+const uint ENCODER_A_PIN = 12; // Encoder A signal
+const uint ENCODER_B_PIN = 13; // Encoder B signal
 
 // Encoder and motor parameters
 const int TICKS_PER_REV = 64; // Encoder resolution (ticks per revolution)

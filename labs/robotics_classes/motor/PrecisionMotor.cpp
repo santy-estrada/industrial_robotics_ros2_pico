@@ -22,7 +22,8 @@ PrecisionMotor::PrecisionMotor(uint ena_pin, uint in1_pin, uint in2_pin,
       ENCODER_A_PIN(enc_a_pin), ENCODER_B_PIN(enc_b_pin),
       TICKS_PER_REV(ticks_per_rev), GEAR_RATIO(gear_ratio),
       Kp(kp), Ti(ti), Td(td), dt(dt),
-      encoder_ticks(0), last_ticks(0), filtered_rpm(0.0f), setpoint_percentage(0.0f) {
+      encoder_ticks(0), last_ticks(0), filtered_rpm(0.0f), 
+      setpoint_percentage(0.0f), control_output(0.0f) {
     
     // Initialize error array
     for (int i = 0; i < 3; i++) {
@@ -96,14 +97,14 @@ float PrecisionMotor::calculate_pid_control(float measured_rpm) {
     
     // Calculate control output using difference equation
     // u(k) = q0*e(k) + q1*e(k-1) + q2*e(k-2) + u(k-1)
-    // Note: PWM_POWER from Motor class acts as u(k-1)
-    float control_output = q0 * error[0] + q1 * error[1] + q2 * error[2] + PWM_POWER;
+    // Use the stored control_output as u(k-1)
+    float new_control_output = q0 * error[0] + q1 * error[1] + q2 * error[2] + control_output;
 
     // Saturate control output to [-100, 100] percentage
-    if (control_output > 100.0f) control_output = 100.0f;
-    if (control_output < -100.0f) control_output = -100.0f;
+    if (new_control_output > 100.0f) new_control_output = 100.0f;
+    if (new_control_output < -100.0f) new_control_output = -100.0f;
     
-    return control_output;
+    return new_control_output;
 }
 
 void PrecisionMotor::set_motor(float desired_speed) {
@@ -116,23 +117,21 @@ void PrecisionMotor::set_motor(float desired_speed) {
     
     // Calculate control signal using PID
     float u = calculate_pid_control(measured_speed);
+    
+    // Store the control output (with sign) for reporting and next iteration
+    control_output = u;
 
     // Set direction and apply control
     if (u > 0) {
-        gpio_put(IN1_PIN, 1);
-        gpio_put(IN2_PIN, 0);
-        setPwmPower(u);
+        moveFwd(u);  // Move forward with positive PWM
     } else if (u < 0) {
-        gpio_put(IN1_PIN, 0);
-        gpio_put(IN2_PIN, 1);
-        setPwmPower(-u);  // Make positive for PWM
+        moveBckwd(-u); // Move backward with positive PWM (negate the negative u)
     } else {
         stop();
     }
     
-    // Apply the PWM power
-    uint16_t pwm_level = (uint16_t)(getPwmPower() * 12499.0f / 100.0f);
-    pwm_set_gpio_level(ENA_PIN, pwm_level);
+    // The Motor class methods (moveFwd/moveBckwd) already handle PWM setting
+    // No need to manually override PWM here
 }
 
 void PrecisionMotor::calculate_rpm(float* revs, float* rpm) {
@@ -161,7 +160,7 @@ float PrecisionMotor::get_setpoint() const {
 }
 
 float PrecisionMotor::get_control_output() const { 
-    return getPwmPower(); // Control output is the PWM power from Motor class
+    return control_output; // Return the actual control output with proper sign
 }
 
 float PrecisionMotor::get_filtered_rpm() const { 

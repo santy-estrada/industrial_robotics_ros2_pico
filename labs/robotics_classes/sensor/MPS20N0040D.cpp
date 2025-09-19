@@ -92,9 +92,13 @@ long MPS20N0040D::readRaw() {
         sleep_us(1);
     }
 
-    // Convert 24-bit two's complement to signed long (same as Arduino version)
-    data[2] ^= 0x80;
+    // Convert 24-bit data to signed long
     long result = ((uint32_t)data[2] << 16) | ((uint32_t)data[1] << 8) | (uint32_t)data[0];
+    
+    // Convert from 24-bit unsigned to signed (two's complement)
+    if (result & 0x800000) {  // If MSB is set (negative number)
+        result |= 0xFF000000;  // Sign extend to 32-bit
+    }
     
     last_reading = result;
     return result;
@@ -119,10 +123,17 @@ float MPS20N0040D::readAveraged(int avg_size) {
     }
     
     avg_val /= avg_size;
-    // Datasheet claims: offset is +25mV and that S ≈ 50mV/40kPa
-    avg_val = ((avg_val / 8388608.0f) * 3.3f - 0.025f) * (40.0f / 0.05f); // Convert to kPa
     
-    return avg_val;
+    // Calibration based on actual readings:
+    // At atmospheric pressure (0 kPa gauge), raw reading is ~4,847,500
+    // This becomes our zero reference point
+    const float ATMOSPHERIC_RAW = 4847500.0f;  // Raw value at 0 kPa gauge pressure
+    const float SENSITIVITY = 2000.0f;         // Approximate sensitivity (raw counts per kPa)
+    
+    // Calculate gauge pressure (pressure above atmospheric)
+    float gauge_pressure = (avg_val - ATMOSPHERIC_RAW) / SENSITIVITY;
+    
+    return gauge_pressure;
 }
 
 long MPS20N0040D::getLastReading() const {

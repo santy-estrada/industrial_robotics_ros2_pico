@@ -23,6 +23,7 @@ private:
     // PID error history: e(k), e(k-1), e(k-2)
     float error[3];
     float setpoint_percentage; // Setpoint as percentage
+    float control_output;      // Store the actual control output (with sign)
     static constexpr float MAX_RPM = 200.0f; // 100% corresponds to 200 RPM
 
     // Encoder tracking variables
