@@ -222,8 +222,8 @@ int main() {
     
     // Create SCARA joint 1
     printf("Creating SCARA Joint 1...\n");
-    Joint joint1('R', -90.0f, 90.0f, &joint1_motor, 4.0f, 
-                 &joint1_limit_min, &joint1_limit_max, 1.0f);  // Joint 1: ±90° with 4:1 joint ratio
+    Joint joint1('R', -85.0f, 85.0f, &joint1_motor, 4.0f, 
+                 &joint1_limit_min, &joint1_limit_max, 1.0f);  // Joint 1: ±85° with 4:1 joint ratio
 #endif
 
 #ifdef TEST_JOINT2
