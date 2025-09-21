@@ -193,7 +193,7 @@ int main()
 
     // Home Routine: Move motors to touch all limit switches
     // 8% PWM speed
-    int pwm_speed_percent = 8;
+    int pwm_speed_percent = 6;
 #endif
 
     gpio_put(LED_PIN, 1); // Turn on the onboard LED to indicate the program is running

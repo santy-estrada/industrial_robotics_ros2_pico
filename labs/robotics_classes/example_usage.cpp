@@ -7,15 +7,15 @@
 #include <stdio.h>
 
 // Test configuration defines - comment/uncomment to enable/disable tests
-#define TEST_MOTOR
-#define TEST_BALLAST
+// #define TEST_MOTOR
+// #define TEST_BALLAST
 // #define TEST_PRECISION_MOTOR
-// #define TEST_ENCODER_TICKS
+#define TEST_ENCODER_TICKS
 // #define TEST_LIMITED_CONTROLLER
-#define TEST_LIGHT_SENSOR
+// #define TEST_LIGHT_SENSOR
 // #define TEST_ULTRASONIC_SENSOR
 // #define TEST_LIMIT_SWITCH
-#define TEST_PRESSURE_SENSOR
+// #define TEST_PRESSURE_SENSOR
 
 #define LED_PIN 25
 
