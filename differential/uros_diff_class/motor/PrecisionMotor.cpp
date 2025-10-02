@@ -148,7 +148,9 @@ void PrecisionMotor::calculate_rpm(float* revs, float* rpm) {
 
 float PrecisionMotor::apply_low_pass_filter(float raw_rpm) {
     filtered_rpm = ((alpha * raw_rpm + (1.0f - alpha) * filtered_rpm))*correction_factor;
-    filtered_rpm = 0.78431f*filtered_rpm + 0.19608f;
+    if(filtered_rpm > 10){
+        // filtered_rpm = 0.78431f*filtered_rpm + 0.19608f;
+    }
     return filtered_rpm;
 }
 
