@@ -98,6 +98,7 @@ bool system_initialized = false;
 // Communication timeout tracking
 uint64_t last_setpoint_time = 0;
 bool communication_timeout_active = false;
+int cont_inactive = 0;
 
 // Wheel speed setpoints (RPM)
 float left_wheel_setpoint = 0.0f;
@@ -117,6 +118,7 @@ void wheel_setpoint_subscription_callback(const void * msgin) {
     if (communication_timeout_active) {
         communication_timeout_active = false;
         printf("DIFF: Communication restored\n");
+        cont_inactive = 0;
     }
     
     // Only accept commands if system is initialized
@@ -239,9 +241,13 @@ void control_timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
             printf("DIFF: COMMUNICATION TIMEOUT - Stopping motors (%.1f seconds since last setpoint)\n", 
                    time_since_last_setpoint / 1000.0f);
             
-            // Stop all motors
-            g_diff_robot->set_speeds(0.0f, 0.0f);
-            g_diff_robot->stop();
+            // Stop all motors (setpoint to 0 for the first 10 iterations, then motors stop)
+            if (cont_inactive < 10){
+                g_diff_robot->set_speeds(0.0f, 0.0f);
+                cont_inactive++;
+            }else {
+                g_diff_robot->stop();
+            }
             
             // Reset setpoints
             left_wheel_setpoint = 0.0f;

@@ -17,7 +17,7 @@ DiffDrive::DiffDrive(uint motor_l_ena, uint motor_l_in1, uint motor_l_in2,
       imu_sda(imu_sda), imu_scl(imu_scl), i2c_port(i2c_port),
       encoder_ticks_per_rev(encoder_ticks_per_rev), gear_ratio(gear_ratio),
       dt(control_dt), pid_kp(pid_kp), pid_ti(pid_ti), pid_td(pid_td),
-      obstacle_threshold_cm(5.0f), emergency_stop_threshold_cm(4.0f),
+      obstacle_threshold_cm(20.0f), emergency_stop_threshold_cm(15.0f), cont_stop(0),
       is_warning(false), is_emergency_stopped(false),
       motors_initialized(false), sensors_initialized(false),
       current_distance_cm(-1.0f), distance_valid(false),
@@ -56,7 +56,7 @@ bool DiffDrive::init() {
     motor_right = new PrecisionMotor(motor_r_ena, motor_r_in1, motor_r_in2,
                                     encoder_r_a, encoder_r_b,
                                     encoder_ticks_per_rev, gear_ratio, dt,
-                                    pid_kp, pid_ti, pid_td, 0.995f);
+                                    pid_kp, pid_ti, pid_td);
     
     if (!motor_left || !motor_right) {
         printf("ERROR: Failed to create motors!\n");
@@ -121,8 +121,9 @@ void DiffDrive::update() {
             if (!is_emergency_stopped) {
                 printf("EMERGENCY STOP: Obstacle at %.1f cm (threshold: %.1f cm)\n", 
                        current_distance_cm, emergency_stop_threshold_cm);
-                motor_left->stop();
-                motor_right->stop();
+                       
+                motor_left->set_motor(0.0f);
+                motor_right->set_motor(0.0f);
                 is_emergency_stopped = true;
             }
         } else {
@@ -143,9 +144,14 @@ void DiffDrive::update() {
     if (!is_emergency_stopped) {
         motor_left->set_motor(motor_left->get_setpoint());
         motor_right->set_motor(motor_right->get_setpoint());
-    }else {
+        cont_stop = 0;
+    }else if (cont_stop < 10) {
         motor_left->set_motor(0.0f);
         motor_right->set_motor(0.0f);
+        cont_stop++;
+    }else {
+        motor_left->stop();
+        motor_right->stop();
     }
 }
 
@@ -173,6 +179,9 @@ void DiffDrive::set_speeds(float left_rpm, float right_rpm) {
             motor_right->stop();
         }
         motor_right->set_motor(right_rpm);
+    } else {
+        motor_left->set_motor(0.0f);
+        motor_right->set_motor(0.0f);
     }
 }
 

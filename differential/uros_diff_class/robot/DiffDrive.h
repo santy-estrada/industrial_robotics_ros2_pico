@@ -30,6 +30,7 @@ private:
     // Safety thresholds
     float obstacle_threshold_cm;
     float emergency_stop_threshold_cm;
+    int cont_stop;
     
     // Status flags
     bool is_warning;
