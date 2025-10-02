@@ -9,9 +9,9 @@
 // Test configuration defines - comment/uncomment to enable/disable tests
 // NOTE: TEST_FULL_SCARA is mutually exclusive with individual joint tests
 // #define TEST_FULL_SCARA
-// #define TEST_JOINT1
+#define TEST_JOINT1
 // #define TEST_JOINT2  
-#define TEST_JOINT3
+// #define TEST_JOINT3
 
 // SCARA Robot configuration
 #define LED_PIN 25
