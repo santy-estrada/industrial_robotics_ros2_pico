@@ -33,6 +33,9 @@ This project provides a complete micro-ROS integration for a differential drive 
 
 #### `/diff_measurements` (geometry_msgs/Twist)
 - **linear.x**: Left wheel speed (RPM)
+- **linear.y**: Communication status (0=OK, 555=Timeout)
+- **linear.z**: Warning status (0=OK, 1=Warning)
+- **angular.x**: Emergency stop status (0=OK, 1=Emergency)
 - **angular.z**: Right wheel speed (RPM)
 - **Frequency**: 10Hz
 
@@ -58,6 +61,7 @@ This project provides a complete micro-ROS integration for a differential drive 
 
 - **Warning Threshold**: 5cm (configurable)
 - **Emergency Stop**: 4cm (automatic motor shutdown)
+- **Communication Timeout**: 1.5 seconds maximum between setpoint messages
 - **Status Monitoring**: Real-time safety alerts via console
 
 ## Build Instructions
@@ -102,8 +106,13 @@ ros2 topic pub /wheel_setpoint geometry_msgs/Twist "{linear: {x: 0.0}, angular: 
 
 ### Monitor robot state:
 ```bash
-# View wheel speeds
+# View wheel speeds and status
 ros2 topic echo /diff_measurements
+
+# Check communication status
+# linear.y = 0 (normal) or 555 (communication timeout)
+# linear.z = 0 (no warning) or 1 (obstacle warning)  
+# angular.x = 0 (normal) or 1 (emergency stop)
 
 # View IMU data
 ros2 topic echo /imu
@@ -111,6 +120,13 @@ ros2 topic echo /imu
 # View distance sensor
 ros2 topic echo /ultrasonic
 ```
+
+### Communication Timeout Feature:
+The robot expects wheel setpoint messages at **minimum 0.75Hz**. If no message is received for more than 1.5 seconds:
+- Motors are automatically stopped for safety
+- `diff_measurements.linear.y` becomes **555** to indicate timeout
+- Console displays: `"DIFF: COMMUNICATION TIMEOUT - Stopping motors"`
+- Normal operation resumes when setpoints are received again
 
 ## Console Output
 
@@ -122,6 +138,8 @@ DiffDrive robot initialized successfully!
 DIFF: Received wheel setpoints - Left:50.00 rpm, Right:50.00 rpm
 DIFF: WARNING - Obstacle detected!
 DIFF: EMERGENCY STOP - Motors stopped!
+DIFF: COMMUNICATION TIMEOUT - Stopping motors (1.5 seconds since last setpoint)
+DIFF: Communication restored
 ```
 
 ## Architecture

@@ -77,6 +77,7 @@ DiffDrive* g_diff_robot = nullptr;
 
 // Timing configuration
 #define CONTROL_TIMER_PERIOD_MS 100    // 10Hz control loop (dt = 0.1s)
+#define COMMUNICATION_TIMEOUT_MS 1500  // 0.75Hz minimum communication rate (1.5 second timeout)
 
 // ROS2 Publishers and Subscribers
 rcl_subscription_t wheel_setpoint_subs;        // Subscriber for wheel speed setpoints
@@ -94,6 +95,10 @@ sensor_msgs__msg__Range range_msg;             // Range message
 // State tracking
 bool system_initialized = false;
 
+// Communication timeout tracking
+uint64_t last_setpoint_time = 0;
+bool communication_timeout_active = false;
+
 // Wheel speed setpoints (RPM)
 float left_wheel_setpoint = 0.0f;
 float right_wheel_setpoint = 0.0f;
@@ -104,6 +109,15 @@ void wheel_setpoint_subscription_callback(const void * msgin) {
     
     printf("DIFF: Received wheel setpoints - Left:%.2f rpm, Right:%.2f rpm\n", 
            twist_msg_const->linear.x, twist_msg_const->angular.z);
+    
+    // Update communication timestamp
+    last_setpoint_time = to_ms_since_boot(get_absolute_time());
+    
+    // Clear communication timeout flag if it was active
+    if (communication_timeout_active) {
+        communication_timeout_active = false;
+        printf("DIFF: Communication restored\n");
+    }
     
     // Only accept commands if system is initialized
     if (!system_initialized) {
@@ -215,6 +229,28 @@ void control_timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
         return;
     }
     
+    // Check for communication timeout
+    uint64_t current_time = to_ms_since_boot(get_absolute_time());
+    uint64_t time_since_last_setpoint = current_time - last_setpoint_time;
+    
+    // If no setpoint received for more than 1 second, stop motors
+    if (last_setpoint_time > 0 && time_since_last_setpoint > COMMUNICATION_TIMEOUT_MS) {
+        if (!communication_timeout_active) {
+            printf("DIFF: COMMUNICATION TIMEOUT - Stopping motors (%.1f seconds since last setpoint)\n", 
+                   time_since_last_setpoint / 1000.0f);
+            
+            // Stop all motors
+            g_diff_robot->set_speeds(0.0f, 0.0f);
+            g_diff_robot->stop();
+            
+            // Reset setpoints
+            left_wheel_setpoint = 0.0f;
+            right_wheel_setpoint = 0.0f;
+            
+            communication_timeout_active = true;
+        }
+    }
+    
     // Update robot state (motor control, sensor reading, safety checks)
     g_diff_robot->update();
     
@@ -230,7 +266,7 @@ void control_timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
     // Prepare and publish wheel measurements message
     // linear.x = left wheel speed (RPM), angular.z = right wheel speed (RPM)
     diff_measurements_msg.linear.x = left_current_speed;
-    diff_measurements_msg.linear.y = 0.0f; // Unused
+    diff_measurements_msg.linear.y = communication_timeout_active ? 555.0f : 0.0f; // Communication timeout indicator
     diff_measurements_msg.linear.z = (warning_active ? 1.0f : 0.0f); // Warning status
 
     diff_measurements_msg.angular.x = (emergency_active ? 1.0f : 0.0f); // Emergency status

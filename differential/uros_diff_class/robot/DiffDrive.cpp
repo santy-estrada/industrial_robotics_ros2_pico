@@ -143,6 +143,9 @@ void DiffDrive::update() {
     if (!is_emergency_stopped) {
         motor_left->set_motor(motor_left->get_setpoint());
         motor_right->set_motor(motor_right->get_setpoint());
+    }else {
+        motor_left->set_motor(0.0f);
+        motor_right->set_motor(0.0f);
     }
 }
 
@@ -163,14 +166,13 @@ void DiffDrive::set_speeds(float left_rpm, float right_rpm) {
     if (motors_initialized && !is_emergency_stopped) {
         if (left_rpm == 0.0f) {
             motor_left->stop();
-        } else {
-            motor_left->set_motor(left_rpm);
         }
+        motor_left->set_motor(left_rpm);
+
         if (right_rpm == 0.0f) {
             motor_right->stop();
-        } else {
-            motor_right->set_motor(right_rpm);
         }
+        motor_right->set_motor(right_rpm);
     }
 }
 
