@@ -30,7 +30,6 @@ private:
     // Safety thresholds
     float obstacle_threshold_cm;
     float emergency_stop_threshold_cm;
-    int cont_stop;
     
     // Status flags
     bool is_warning;
@@ -44,6 +43,10 @@ private:
     
     // Control parameters
     float dt;
+    
+    // Setpoint storage for decoupled control
+    float left_setpoint_rpm;
+    float right_setpoint_rpm;
     
     // Pin definitions
     uint motor_l_ena, motor_l_in1, motor_l_in2;

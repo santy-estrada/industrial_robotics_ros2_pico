@@ -17,10 +17,11 @@ DiffDrive::DiffDrive(uint motor_l_ena, uint motor_l_in1, uint motor_l_in2,
       imu_sda(imu_sda), imu_scl(imu_scl), i2c_port(i2c_port),
       encoder_ticks_per_rev(encoder_ticks_per_rev), gear_ratio(gear_ratio),
       dt(control_dt), pid_kp(pid_kp), pid_ti(pid_ti), pid_td(pid_td),
-      obstacle_threshold_cm(20.0f), emergency_stop_threshold_cm(15.0f), cont_stop(0),
+      obstacle_threshold_cm(5.0f), emergency_stop_threshold_cm(4.0f),
       is_warning(false), is_emergency_stopped(false),
       motors_initialized(false), sensors_initialized(false),
       current_distance_cm(-1.0f), distance_valid(false),
+      left_setpoint_rpm(0.0f), right_setpoint_rpm(0.0f),
       motor_left(nullptr), motor_right(nullptr),
       ultrasonic(nullptr), imu(nullptr), filter(nullptr) {
 }
@@ -121,9 +122,10 @@ void DiffDrive::update() {
             if (!is_emergency_stopped) {
                 printf("EMERGENCY STOP: Obstacle at %.1f cm (threshold: %.1f cm)\n", 
                        current_distance_cm, emergency_stop_threshold_cm);
-                       
-                motor_left->set_motor(0.0f);
-                motor_right->set_motor(0.0f);
+                left_setpoint_rpm = 0.0f;
+                right_setpoint_rpm = 0.0f;
+                motor_left->stop();
+                motor_right->stop();
                 is_emergency_stopped = true;
             }
         } else {
@@ -140,18 +142,11 @@ void DiffDrive::update() {
         filter->update(imu->gx, imu->gy, imu->gz, imu->ax, imu->ay, imu->az, dt);
     }
     
-    // Update motor control (only if not emergency stopped)
-    if (!is_emergency_stopped) {
-        motor_left->set_motor(motor_left->get_setpoint());
-        motor_right->set_motor(motor_right->get_setpoint());
-        cont_stop = 0;
-    }else if (cont_stop < 10) {
-        motor_left->set_motor(0.0f);
-        motor_right->set_motor(0.0f);
-        cont_stop++;
-    }else {
-        motor_left->stop();
-        motor_right->stop();
+    // Run continuous PID control with stored setpoints (same pattern as diff_app)
+    // This maintains the current setpoints and updates control law based on encoder feedback
+    if (!is_emergency_stopped && motors_initialized) {
+        motor_left->set_motor(left_setpoint_rpm);
+        motor_right->set_motor(right_setpoint_rpm);
     }
 }
 
@@ -170,23 +165,17 @@ void DiffDrive::set_right_speed(float speed_rpm) {
 
 void DiffDrive::set_speeds(float left_rpm, float right_rpm) {
     if (motors_initialized && !is_emergency_stopped) {
-        if (left_rpm == 0.0f) {
-            motor_left->stop();
-        }
-        motor_left->set_motor(left_rpm);
-
-        if (right_rpm == 0.0f) {
-            motor_right->stop();
-        }
-        motor_right->set_motor(right_rpm);
-    } else {
-        motor_left->set_motor(0.0f);
-        motor_right->set_motor(0.0f);
+        // Store setpoints to be applied in next update() cycle
+        left_setpoint_rpm = left_rpm;
+        right_setpoint_rpm = right_rpm;
+        printf("DiffDrive: Setpoints stored - Left:%.2f rpm, Right:%.2f rpm\n", left_rpm, right_rpm);
     }
 }
 
 void DiffDrive::stop() {
     if (motors_initialized) {
+        left_setpoint_rpm = 0.0f;
+        right_setpoint_rpm = 0.0f;
         motor_left->stop();
         motor_right->stop();
         printf("DiffDrive: All motors stopped\n");
