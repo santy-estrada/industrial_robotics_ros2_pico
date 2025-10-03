@@ -143,7 +143,7 @@ void PrecisionMotor::calculate_rpm(float* revs, float* rpm) {
     *revs = (float)encoder_ticks / TICKS_PER_REV;
 
     float raw_rpm = ((float)ticks_since_last / TICKS_PER_REV) * (60.0f / dt) * (1.0f / GEAR_RATIO);
-    *rpm = apply_low_pass_filter(raw_rpm*1.334f);
+    *rpm = apply_low_pass_filter(raw_rpm);
 }
 
 float PrecisionMotor::apply_low_pass_filter(float raw_rpm) {
