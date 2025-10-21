@@ -10,8 +10,9 @@
 // #define TEST_MOTOR
 // #define TEST_BALLAST
 // #define TEST_PRECISION_MOTOR
-#define TEST_ENCODER_TICKS
+// #define TEST_ENCODER_TICKS
 // #define TEST_LIMITED_CONTROLLER
+#define TEST_LIMITED_BALLAST
 // #define TEST_LIGHT_SENSOR
 // #define TEST_ULTRASONIC_SENSOR
 // #define TEST_LIMIT_SWITCH
@@ -39,8 +40,8 @@ int main() {
 
 #ifdef TEST_LIMIT_SWITCH
     // Create limit switches on different GPIO pins
-    LimitSwitch limit_switch1(8);  // GPIO8
-    LimitSwitch limit_switch2(9);  // GPIO9
+    LimitSwitch limit_switch1(6);  // GPIO6
+    LimitSwitch limit_switch2(7);  // GPIO7
 #endif
 
 #ifdef TEST_PRESSURE_SENSOR
@@ -76,6 +77,13 @@ int main() {
     // Create precision motors for limited controller testing
     PrecisionMotor limited_motor1(16, 18, 17, 12, 13, 28, 150.0f);   // Microgear motor
     PrecisionMotor limited_motor2(21, 19, 20, 14, 15, 64, 50.0f);    // Pololu motor
+#endif
+
+#ifdef TEST_LIMITED_BALLAST
+    // Create ballast motor and limit switches
+    Motor ballast_motor(16, 18, 17);  // ENA=16, IN1=18, IN2=17
+    LimitSwitch limit_switch1(6);     // GPIO6 - End switch 1
+    LimitSwitch limit_switch2(7);     // GPIO7 - End switch 2
 #endif
     
     printf("Components initialized successfully!\n");
@@ -173,6 +181,22 @@ int main() {
     printf("Motor2: Range -4000 to -5 ticks (starts going backward to -4000)\n");
     fflush(stdout);
     printf("Speed controller active with automatic limit detection...\n\n");
+    fflush(stdout);
+#endif
+
+#ifdef TEST_LIMITED_BALLAST
+    // Limited ballast testing - motor with limit switch protection
+    printf("=== LIMITED BALLAST TEST ===\n");
+    fflush(stdout);
+    printf("Ballast motor with limit switch protection.\n");
+    fflush(stdout);
+    printf("Motor will cycle: Forward 2s -> Stop 1s -> Backward 2s -> Stop 1s\n");
+    fflush(stdout);
+    printf("Switch1 (GPIO6): Prevents BACKWARD motion when pressed\n");
+    fflush(stdout);
+    printf("Switch2 (GPIO7): Prevents FORWARD motion when pressed\n");
+    fflush(stdout);
+    printf("Starting ballast cycle...\n\n");
     fflush(stdout);
 #endif
     
@@ -311,6 +335,81 @@ int main() {
             printf("Motor1: %d ticks | %.1f RPM (%.1f%%) | Target: %.1fRPM | Motor2: %d ticks | %.1f RPM (%.1f%%) | Target: %.1fRPM\n",
                    ticks1, limited_motor1.get_filtered_rpm(), limited_motor1.get_control_output(), desired_speed1,
                    ticks2, limited_motor2.get_filtered_rpm(), limited_motor2.get_control_output(), desired_speed2);
+#endif
+
+#ifdef TEST_LIMITED_BALLAST
+            // Limited ballast - cycle through movements with limit switch protection
+            static uint64_t ballast_cycle_time = 0;
+            static int ballast_state = 0;  // 0=forward, 1=stop1, 2=backward, 3=stop2
+            
+            // Read limit switches
+            bool switch1_pressed = limit_switch1.isPressed();  // Prevents BACKWARD
+            bool switch2_pressed = limit_switch2.isPressed();  // Prevents FORWARD
+            
+            // Check if it's time to change state (cycle timing)
+            uint64_t state_duration = 0;
+            switch(ballast_state) {
+                case 0: state_duration = 2000; break;  // Forward for 2s
+                case 1: state_duration = 1000; break;  // Stop for 1s
+                case 2: state_duration = 2000; break;  // Backward for 2s
+                case 3: state_duration = 1000; break;  // Stop for 1s
+            }
+            
+            if (current_time - ballast_cycle_time >= state_duration) {
+                ballast_state = (ballast_state + 1) % 4;  // Cycle through states
+                ballast_cycle_time = current_time;
+            }
+            
+            // Execute state with limit switch protection
+            switch(ballast_state) {
+                case 0:  // Forward (fill)
+                    if (switch2_pressed) {
+                        ballast_motor.stop();
+                        printf("Ballast: BLOCKED - Switch2 pressed, cannot move forward!\n");
+                        fflush(stdout);
+                    } else if (switch1_pressed) {
+                        ballast_motor.stop();
+                        printf("Ballast: BLOCKED - Switch1 pressed, cannot move forward!\n");
+                        fflush(stdout);
+                    } else {
+                        ballast_motor.moveFwd(70.0f);
+                        printf("Ballast: 70%% forward (fill) | SW1:%s SW2:%s\n",
+                               switch1_pressed ? "PRESSED" : "OK",
+                               switch2_pressed ? "PRESSED" : "OK");
+                    }
+                    break;
+                    
+                case 1:  // Stop
+                    ballast_motor.stop();
+                    printf("Ballast: Stopped | SW1:%s SW2:%s\n",
+                           switch1_pressed ? "PRESSED" : "OK",
+                           switch2_pressed ? "PRESSED" : "OK");
+                    break;
+                    
+                case 2:  // Backward (empty)
+                    if (switch1_pressed) {
+                        ballast_motor.stop();
+                        printf("Ballast: BLOCKED - Switch1 pressed, cannot move backward!\n");
+                        fflush(stdout);
+                    } else if (switch2_pressed) {
+                        ballast_motor.stop();
+                        printf("Ballast: BLOCKED - Switch2 pressed, cannot move backward!\n");
+                        fflush(stdout);
+                    } else {
+                        ballast_motor.moveBckwd(70.0f);
+                        printf("Ballast: 70%% backward (empty) | SW1:%s SW2:%s\n",
+                               switch1_pressed ? "PRESSED" : "OK",
+                               switch2_pressed ? "PRESSED" : "OK");
+                    }
+                    break;
+                    
+                case 3:  // Stop
+                    ballast_motor.stop();
+                    printf("Ballast: Stopped | SW1:%s SW2:%s\n",
+                           switch1_pressed ? "PRESSED" : "OK",
+                           switch2_pressed ? "PRESSED" : "OK");
+                    break;
+            }
 #endif
             
             last_time_control = current_time;
