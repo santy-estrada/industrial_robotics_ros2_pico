@@ -1,23 +1,21 @@
 #include "motor/Motor.h"
-#include "motor/PrecisionMotor.h"
 #include "sensor/TEMT6000.h"
-#include "sensor/HCSR05.h"
 #include "sensor/LimitSwitch.h"
 #include "sensor/MPS20N0040D.h"
+#include "sensor/SOIL_MOIST.h"
+#include "rov/ROV.h"
 #include <stdio.h>
 
 // Test configuration defines - comment/uncomment to enable/disable tests
 // #define TEST_MOTOR
 // #define TEST_BALLAST
-// #define TEST_PRECISION_MOTOR
-// #define TEST_ENCODER_TICKS
-// #define TEST_LIMITED_CONTROLLER
 // #define TEST_LIMITED_BALLAST
-#define TEST_LIMITED_BALLAST_1
+// #define TEST_LIMITED_BALLAST_1
 // #define TEST_LIGHT_SENSOR
-// #define TEST_ULTRASONIC_SENSOR
 // #define TEST_LIMIT_SWITCH
 // #define TEST_PRESSURE_SENSOR
+#define TEST_MOISTURE_SENSOR
+// #define TEST_ROV
 
 #define LED_PIN 25
 
@@ -34,11 +32,6 @@ int main() {
     TEMT6000 light_sensor(28);
 #endif
 
-#ifdef TEST_ULTRASONIC_SENSOR
-    // Create sensor with trigger on GPIO27, echo on GPIO26
-    HCSR05 ultrasonic(27, 26);
-#endif
-
 #ifdef TEST_LIMIT_SWITCH
     // Create limit switches on different GPIO pins
     LimitSwitch limit_switch1(6);  // GPIO6
@@ -51,6 +44,29 @@ int main() {
     pressure_sensor.setGain(128);  // Set gain to 128 (default)
 #endif
 
+#ifdef TEST_MOISTURE_SENSOR
+    // Create moisture sensor with digital and analog outputs
+    SOIL_MOIST moisture_sensor(9, 28);  // Digital=GPIO9, Analog=GPIO28 (ADC2)
+#endif
+
+#ifdef TEST_ROV
+    // Create ROV with all components
+    // Thrust motors: Motor1=GPIO(0,1,2), Motor2=GPIO(3,4,5)
+    // Ballast motor: GPIO(21,19,20)
+    // Limit switches: Full=GPIO7, Empty=GPIO8
+    // Moisture sensor: Digital=GPIO9, Analog=GPIO28
+    // Pressure sensor: OUT=GPIO10, SCK=GPIO11
+    ROV rov(0, 1, 2,      // Thrust motor 1
+            3, 4, 5,      // Thrust motor 2
+            21, 19, 20,   // Ballast motor
+            7, 8,         // Full and Empty limit switches
+            9, 28,        // Moisture sensor
+            10, 11);      // Pressure sensor
+    
+    // Set placeholder depth conversion (user should calibrate)
+    rov.setDepthConversion(0.0f, 1.0f);  // offset=0, factor=1.0
+#endif
+
 #ifdef TEST_MOTOR
     // Create a simple motor
     Motor simple_motor1(0, 1, 2);  // ENA=0, IN1=1, IN2=2
@@ -60,24 +76,6 @@ int main() {
 #ifdef TEST_BALLAST
     // Create ballast motor
     Motor simple_motor3(16, 18, 17);  // ENA=16, IN1=17, IN2=18
-#endif
-    
-#ifdef TEST_PRECISION_MOTOR
-    // Create precision motors with different configurations
-    PrecisionMotor precision_motor1(16, 18, 17, 12, 13, 28, 150.0f);   // Microgear motor
-    PrecisionMotor precision_motor2(21, 19, 20, 14, 15, 64, 50.0f);    // Pololu motor
-#endif
-
-#ifdef TEST_ENCODER_TICKS
-    // Create precision motors for encoder tick testing (motors will stay stopped)
-    PrecisionMotor encoder_motor1(16, 18, 17, 12, 13, 28, 150.0f);   // Microgear motor
-    PrecisionMotor encoder_motor2(21, 19, 20, 14, 15, 64, 50.0f);    // Pololu motor
-#endif
-
-#ifdef TEST_LIMITED_CONTROLLER
-    // Create precision motors for limited controller testing
-    PrecisionMotor limited_motor1(16, 18, 17, 12, 13, 28, 150.0f);   // Microgear motor
-    PrecisionMotor limited_motor2(21, 19, 20, 14, 15, 64, 50.0f);    // Pololu motor
 #endif
 
 #if defined(TEST_LIMITED_BALLAST) || defined(TEST_LIMITED_BALLAST_1)
@@ -153,37 +151,6 @@ int main() {
     sleep_ms(1000);
 #endif
 
-#ifdef TEST_ENCODER_TICKS
-    // Encoder tick testing - motors stay stopped for manual rotation
-    printf("=== ENCODER TICK TEST ===\n");
-    fflush(stdout);
-    printf("Motors are STOPPED. Manually rotate them to see tick counts.\n");
-    fflush(stdout);
-    printf("Motor1: Microgear (28 ticks/rev, 150:1 gear ratio)\n");
-    fflush(stdout);
-    printf("Motor2: Pololu (64 ticks/rev, 50:1 gear ratio)\n");
-    fflush(stdout);
-    printf("Rotate motors slowly to find mechanical limits...\n\n");
-    fflush(stdout);
-    
-    // Ensure motors are stopped
-    encoder_motor1.stop();
-    encoder_motor2.stop();
-#endif
-
-#ifdef TEST_LIMITED_CONTROLLER
-    // Limited controller testing - motors move between tick limits
-    printf("=== LIMITED CONTROLLER TEST ===\n");
-    fflush(stdout);
-    printf("Motors will move between tick limits with automatic direction toggle.\n");
-    fflush(stdout);
-    printf("Motor1: Range -4000 to -5 ticks (starts going backward to -4000)\n");
-    fflush(stdout);
-    printf("Motor2: Range -4000 to -5 ticks (starts going backward to -4000)\n");
-    fflush(stdout);
-    printf("Speed controller active with automatic limit detection...\n\n");
-    fflush(stdout);
-#endif
 
 #if defined(TEST_LIMITED_BALLAST) || defined(TEST_LIMITED_BALLAST_1)
     // Limited ballast testing - motor with limit switch protection
@@ -254,88 +221,114 @@ int main() {
                    limit_switch2.isPressed() ? "PRESSED" : "RELEASED");
 #endif
 
-#ifdef TEST_PRECISION_MOTOR
-            // Motor control - needs consistent timing for PID
-            precision_motor1.set_motor(-5.0f);
-            precision_motor2.set_motor(5.0f);
-
-            printf("Motor1: %.2f RPM (%.2f%%) | Motor2: %.2f RPM (%.2f%%)\n",
-                   precision_motor1.get_filtered_rpm(), precision_motor1.get_control_output(),
-                   precision_motor2.get_filtered_rpm(), precision_motor2.get_control_output());
-            //Print ticks
-            printf("Ticks1: %d | Ticks2: %d\n",
-                   precision_motor1.get_encoder_ticks(),
-                   precision_motor2.get_encoder_ticks());
+#ifdef TEST_MOISTURE_SENSOR
+            // Moisture sensor - digital and analog readings
+            bool moisture_detected = moisture_sensor.readDigital();
+            float moisture_percent = moisture_sensor.readAnalog();
+            
+            bool last_digital = moisture_sensor.getDigitalValue();
+            float last_analog = moisture_sensor.getAnalogValue();
+            
+            // Display with warning if moisture detected
+            if (moisture_sensor.isMoistureDetected()) {
+                printf("*** MOISTURE ALERT *** Digital: %s | Analog: %.1f%% (Last: %.1f%%)\n",
+                       moisture_detected ? "WET" : "DRY",
+                       moisture_percent, last_analog);
+            } else {
+                printf("Moisture: Digital: %s | Analog: %.1f%% (Last: %.1f%%)\n",
+                       moisture_detected ? "WET" : "DRY",
+                       moisture_percent, last_analog);
+            }
 #endif
 
-#ifdef TEST_ENCODER_TICKS
-            // Display encoder ticks for manual rotation testing
-            // Calculate revolutions for both motors
-            float revs1 = (float)encoder_motor1.get_encoder_ticks() / 28.0f;  // 28 ticks per rev
-            float revs2 = (float)encoder_motor2.get_encoder_ticks() / 64.0f;  // 64 ticks per rev
+#ifdef TEST_ROV
+            // ROV comprehensive test with state machine
+            static uint64_t rov_test_time = 0;
+            static int rov_test_state = 0;
             
-            // Calculate output shaft revolutions (after gear reduction)
-            float output_revs1 = revs1 / 150.0f;  // 150:1 gear ratio
-            float output_revs2 = revs2 / 50.0f;   // 50:1 gear ratio
-            
-            // Calculate degrees
-            float degrees1 = output_revs1 * 360.0f;
-            float degrees2 = output_revs2 * 360.0f;
-            
-            printf("Motor1: %d ticks | %.3f revs | OUT: %.3f revs (%.1f°) | Motor2: %d ticks | %.3f revs | OUT: %.3f revs (%.1f°)\n",
-                   encoder_motor1.get_encoder_ticks(), revs1, output_revs1, degrees1,
-                   encoder_motor2.get_encoder_ticks(), revs2, output_revs2, degrees2);
-#endif
-
-#ifdef TEST_LIMITED_CONTROLLER
-            // Limited controller - toggle direction when reaching tick limits
-            static float desired_speed1 = -5.0f;  // Start going backward (negative speed)
-            static float desired_speed2 = -5.0f;  // Start going backward (negative speed)
-            static bool direction_changed1 = false;
-            static bool direction_changed2 = false;
-            
-            // Get current tick counts
-            int32_t ticks1 = limited_motor1.get_encoder_ticks();
-            int32_t ticks2 = limited_motor2.get_encoder_ticks();
-            
-            // Motor 1 limit logic
-            if (ticks1 <= -4000 && desired_speed1 < 0) {
-                // Hit lower limit, change to positive speed
-                desired_speed1 = 5.0f;
-                direction_changed1 = true;
-                printf("Motor1: Hit lower limit (-4000), reversing direction!\n");
-                fflush(stdout);
-            } else if (ticks1 >= -5 && desired_speed1 > 0) {
-                // Hit upper limit, change to negative speed
-                desired_speed1 = -5.0f;
-                direction_changed1 = true;
-                printf("Motor1: Hit upper limit (-5), reversing direction!\n");
-                fflush(stdout);
+            // State machine timing (each state lasts 3 seconds)
+            if (current_time - rov_test_time >= 3000) {
+                rov_test_state = (rov_test_state + 1) % 8;  // 8 states
+                rov_test_time = current_time;
+                printf("\n=== ROV TEST STATE %d ===\n", rov_test_state);
             }
             
-            // Motor 2 limit logic
-            if (ticks2 <= -4000 && desired_speed2 < 0) {
-                // Hit lower limit, change to positive speed
-                desired_speed2 = 5.0f;
-                direction_changed2 = true;
-                printf("Motor2: Hit lower limit (-4000), reversing direction!\n");
-                fflush(stdout);
-            } else if (ticks2 >= -5 && desired_speed2 > 0) {
-                // Hit upper limit, change to negative speed
-                desired_speed2 = -5.0f;
-                direction_changed2 = true;
-                printf("Motor2: Hit upper limit (-5), reversing direction!\n");
-                fflush(stdout);
+            // Read all sensors
+            float depth = rov.getDepth();
+            bool moisture = rov.isMoistureDetected();
+            bool full_sw = rov.isFullSwitchPressed();
+            bool empty_sw = rov.isEmptySwitchPressed();
+            
+            // Execute test states
+            switch(rov_test_state) {
+                case 0:  // Test thrust motor 1 forward (0.5)
+                    printf("Testing Thrust Motor 1: 50%% forward\n");
+                    rov.setThrustMotor1(0.5f);
+                    rov.setThrustMotor2(0.0f);
+                    rov.setBallast(0.0f);
+                    break;
+                    
+                case 1:  // Test thrust motor 2 forward (0.5)
+                    printf("Testing Thrust Motor 2: 50%% forward\n");
+                    rov.setThrustMotor1(0.0f);
+                    rov.setThrustMotor2(0.5f);
+                    rov.setBallast(0.0f);
+                    break;
+                    
+                case 2:  // Test both thrust motors forward (0.7)
+                    printf("Testing Both Thrust Motors: 70%% forward\n");
+                    rov.setThrust(0.7f);
+                    rov.setBallast(0.0f);
+                    break;
+                    
+                case 3:  // Test both thrust motors backward (-0.5)
+                    printf("Testing Both Thrust Motors: 50%% backward\n");
+                    rov.setThrust(-0.5f);
+                    rov.setBallast(0.0f);
+                    break;
+                    
+                case 4:  // Test ballast low power (0.3 exponential = ~9%)
+                    printf("Testing Ballast: Low power 0.3 (exponential = ~9%%)\n");
+                    rov.setThrust(0.0f);
+                    rov.setBallast(0.3f);
+                    break;
+                    
+                case 5:  // Test ballast medium power (0.7 exponential = ~49%)
+                    printf("Testing Ballast: Medium power 0.7 (exponential = ~49%%)\n");
+                    rov.setThrust(0.0f);
+                    rov.setBallast(0.7f);
+                    break;
+                    
+                case 6:  // Test ballast full power (1.0 exponential = 100%)
+                    printf("Testing Ballast: Full power 1.0 (exponential = 100%%)\n");
+                    rov.setThrust(0.0f);
+                    rov.setBallast(1.0f);
+                    break;
+                    
+                case 7:  // Test ballast reverse (-0.5 exponential = -25%)
+                    printf("Testing Ballast: Reverse -0.5 (exponential = -25%%)\n");
+                    rov.setThrust(0.0f);
+                    rov.setBallast(-0.5f);
+                    break;
             }
             
-            // Apply speed control
-            limited_motor1.set_motor(desired_speed1);
-            limited_motor2.set_motor(desired_speed2);
-
-            // Display status
-            printf("Motor1: %d ticks | %.1f RPM (%.1f%%) | Target: %.1fRPM | Motor2: %d ticks | %.1f RPM (%.1f%%) | Target: %.1fRPM\n",
-                   ticks1, limited_motor1.get_filtered_rpm(), limited_motor1.get_control_output(), desired_speed1,
-                   ticks2, limited_motor2.get_filtered_rpm(), limited_motor2.get_control_output(), desired_speed2);
+            // Display sensor status
+            printf("Depth: %.2f | Moisture: %s | Full SW: %s | Empty SW: %s\n",
+                   depth,
+                   moisture ? "DETECTED" : "OK",
+                   full_sw ? "PRESSED" : "OK",
+                   empty_sw ? "PRESSED" : "OK");
+            
+            // Warning messages
+            if (moisture) {
+                printf("*** WARNING: MOISTURE DETECTED - THRUST MOTORS BLOCKED ***\n");
+            }
+            if (full_sw) {
+                printf("*** WARNING: FULL SWITCH - CANNOT FILL BALLAST ***\n");
+            }
+            if (empty_sw) {
+                printf("*** WARNING: EMPTY SWITCH - CANNOT EMPTY BALLAST ***\n");
+            }
 #endif
 
 #ifdef TEST_LIMITED_BALLAST
@@ -452,18 +445,6 @@ int main() {
         
         // SLOW SENSORS - 500ms (2Hz) - Time-dependent but not critical
         if (current_time - last_time_slow_sensors >= 500) {
-            
-#ifdef TEST_ULTRASONIC_SENSOR
-            // Ultrasonic sensor - needs time for sound wave travel (~300ms recommended)
-            long distance = ultrasonic.read();
-            long last_dist = ultrasonic.getDistance();
-            long safe_dist = ultrasonic.getLastKnownDistance();
-
-            if (ultrasonic.isValidDistance(distance)) {
-                printf("Distance: %ld cm (Last: %ld cm, Safe: %ld cm)\n", 
-                       distance, last_dist, safe_dist);
-            }
-#endif
             
             last_time_slow_sensors = current_time;
         }

@@ -1,0 +1,106 @@
+# == DO NEVER EDIT THE NEXT LINES for Raspberry Pi Pico VS Code Extension to work ==
+if(WIN32)
+    set(USERHOME $ENV{USERPROFILE})
+else()
+    set(USERHOME $ENV{HOME})
+endif()
+set(sdkVersion 2.0.0)
+set(toolchainVersion 13_2_Rel1)
+set(picotoolVersion 2.0.0)
+set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
+if (EXISTS ${picoVscode})
+    include(${picoVscode})
+endif()
+# ====================================================================================
+cmake_minimum_required(VERSION 3.12)
+
+include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
+
+project(robotics_classes LANGUAGES C CXX ASM)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+
+pico_sdk_init()
+
+# Add the motor classes as a library
+add_library(motor_lib
+    motor/Motor.cpp
+)
+
+# Add the sensor classes as a library
+add_library(sensor_lib
+    sensor/TEMT6000.cpp
+    sensor/LimitSwitch.cpp
+    sensor/MPS20N0040D.cpp
+    sensor/SOIL_MOIST.cpp
+)
+
+# Add the ROV class as a library
+add_library(rov_lib
+    rov/ROV.cpp
+)
+
+# Include directories for the libraries
+target_include_directories(motor_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_include_directories(sensor_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_include_directories(rov_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Link hardware libraries to the motor library
+target_link_libraries(motor_lib
+    pico_stdlib
+    hardware_pwm
+    hardware_gpio
+    hardware_irq
+)
+
+# Link hardware libraries to the sensor library
+target_link_libraries(sensor_lib
+    pico_stdlib
+    hardware_adc
+    hardware_gpio
+)
+
+# Link libraries for ROV (needs motor and sensor libraries)
+target_link_libraries(rov_lib
+    motor_lib
+    sensor_lib
+    pico_stdlib
+    hardware_pwm
+    hardware_gpio
+    hardware_irq
+    hardware_adc
+)
+
+# Enable C++17 for std::map support
+target_compile_features(motor_lib PUBLIC cxx_std_17)
+
+# Create example executable
+add_executable(rov_app
+    rov_app.cpp
+)
+
+# Link the motor library to the example
+target_link_libraries(rov_app
+    motor_lib
+    sensor_lib
+    rov_lib
+    pico_stdlib
+)
+
+# Enable C++17 for the example
+target_compile_features(rov_app PUBLIC cxx_std_17)
+
+# Configure Pico
+pico_enable_stdio_usb(rov_app 1)
+pico_enable_stdio_uart(rov_app 0)
+
+# Generate UF2
+pico_add_extra_outputs(rov_app)
