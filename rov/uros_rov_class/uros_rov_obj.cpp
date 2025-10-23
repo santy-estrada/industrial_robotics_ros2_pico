@@ -26,7 +26,7 @@
 #define ROV_STATUS_TOPIC "rov_status"
 
 // Timing configuration
-#define STATUS_TIMER_PERIOD_MS 100    // 10Hz status publishing
+#define STATUS_TIMER_PERIOD_MS 50    // 20Hz status publishing
 
 // Initialize global variables for ROS2
 rcl_subscription_t cmd_vel_sub;           // Subscriber for command velocity

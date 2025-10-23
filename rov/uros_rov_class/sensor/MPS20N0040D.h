@@ -17,7 +17,7 @@ private:
     static constexpr uint8_t GAIN_64 = 3;   // 64 gain = 3 extra clock pulses  
     static constexpr uint8_t GAIN_32 = 2;   // 32 gain = 2 extra clock pulses
     static constexpr int DEFAULT_AVG_SIZE = 10;  // Default averaging samples
-    static constexpr uint32_t TIMEOUT_US = 100000; // 100ms timeout for ready check
+    static constexpr uint32_t TIMEOUT_US = 10000; // 10ms timeout - quick fail for motor interference, prevents callback blocking
 
     //Constant for pressure conversion
     float ATMOSPHERIC_RAW = 4847500.0f;  // Raw value at 0 kPa gauge pressure

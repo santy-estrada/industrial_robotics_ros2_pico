@@ -29,8 +29,8 @@ ROV::ROV(uint thrust1_ena, uint thrust1_in1, uint thrust1_in2,
 }
 
 float ROV::getDepth() {
-    // Read pressure sensor
-    float pressure_reading = pressure_sensor.readAveraged(5); // Averaged reading (5 samples)
+    // Read pressure sensor (single sample to avoid blocking and reduce interference window)
+    float pressure_reading = pressure_sensor.readAveraged(1); // Single reading - fast and less affected by transient noise
     
     // Apply conversion: depth = (pressure - offset) * factor
     // Then subtract the zero depth reference pressure to get relative depth
@@ -46,7 +46,8 @@ float ROV::getDepth() {
 
 void ROV::calibrateZeroDepth() {
     // Store the RAW pressure reading at the current "zero" depth
-    zero_depth_pressure = pressure_sensor.readAveraged(5);
+    // Use more samples for calibration since it only happens once (when motors are stopped)
+    zero_depth_pressure = pressure_sensor.readAveraged(3);  // 3 samples, acceptable for one-time calibration
     printf("Calibrated zero depth at pressure: %.2f\n", zero_depth_pressure);
 }
 

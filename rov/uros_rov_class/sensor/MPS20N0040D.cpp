@@ -16,9 +16,10 @@ void MPS20N0040D::configurePins() {
         gpio_set_dir(SCK_PIN, GPIO_OUT);
         gpio_put(SCK_PIN, 0);  // Start with clock LOW
         
-        // Initialize data pin as input
+        // Initialize data pin as input with pull-down to reduce noise
         gpio_init(OUT_PIN);
         gpio_set_dir(OUT_PIN, GPIO_IN);
+        gpio_pull_down(OUT_PIN);  // Pull-down helps reduce floating state and motor noise
         
         pins_configured = true;
     }
@@ -134,7 +135,7 @@ float MPS20N0040D::readAveraged(int avg_size) {
     for (int i = 0; i < avg_size; i++) {
         avg_val += (float)readRaw();
         if (i < avg_size - 1) {  // Don't delay after last reading
-            sleep_ms(50);  // Same delay as Arduino example
+            sleep_ms(5);  // Same delay as Arduino example
         }
     }
     
