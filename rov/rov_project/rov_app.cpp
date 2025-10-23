@@ -14,8 +14,8 @@
 // #define TEST_LIGHT_SENSOR
 // #define TEST_LIMIT_SWITCH
 // #define TEST_PRESSURE_SENSOR
-#define TEST_MOISTURE_SENSOR
-// #define TEST_ROV
+// #define TEST_MOISTURE_SENSOR
+#define TEST_ROV
 
 #define LED_PIN 25
 
@@ -46,7 +46,7 @@ int main() {
 
 #ifdef TEST_MOISTURE_SENSOR
     // Create moisture sensor with digital and analog outputs
-    SOIL_MOIST moisture_sensor(9, 28);  // Digital=GPIO9, Analog=GPIO28 (ADC2)
+    SOIL_MOIST moisture_sensor(26, 28);  // Digital=GPIO26, Analog=GPIO28 (ADC2)
 #endif
 
 #ifdef TEST_ROV
@@ -58,10 +58,10 @@ int main() {
     // Pressure sensor: OUT=GPIO10, SCK=GPIO11
     ROV rov(0, 1, 2,      // Thrust motor 1
             3, 4, 5,      // Thrust motor 2
-            21, 19, 20,   // Ballast motor
-            7, 8,         // Full and Empty limit switches
-            9, 28,        // Moisture sensor
-            10, 11);      // Pressure sensor
+            21, 20, 19,   // Ballast motor
+            8, 7,         // Full and Empty limit switches
+            26, 28,        // Moisture sensor
+            11, 10);      // Pressure sensor
     
     // Set placeholder depth conversion (user should calibrate)
     rov.setDepthConversion(0.0f, 1.0f);  // offset=0, factor=1.0
@@ -247,8 +247,8 @@ int main() {
             static int rov_test_state = 0;
             
             // State machine timing (each state lasts 3 seconds)
-            if (current_time - rov_test_time >= 3000) {
-                rov_test_state = (rov_test_state + 1) % 8;  // 8 states
+            if (current_time - rov_test_time >= 10000) {
+                rov_test_state = (rov_test_state + 1) % 10;  // 10 states
                 rov_test_time = current_time;
                 printf("\n=== ROV TEST STATE %d ===\n", rov_test_state);
             }
@@ -261,29 +261,29 @@ int main() {
             
             // Execute test states
             switch(rov_test_state) {
-                case 0:  // Test thrust motor 1 forward (0.5)
-                    printf("Testing Thrust Motor 1: 50%% forward\n");
-                    rov.setThrustMotor1(0.5f);
+                case 0:  // Test thrust motor 1 forward (0.2)
+                    printf("Testing Thrust Motor 1 (Right): 20%% forward\n");
+                    rov.setThrustMotor1(0.2f);
                     rov.setThrustMotor2(0.0f);
                     rov.setBallast(0.0f);
                     break;
                     
-                case 1:  // Test thrust motor 2 forward (0.5)
-                    printf("Testing Thrust Motor 2: 50%% forward\n");
+                case 1:  // Test thrust motor 2 forward (0.2)
+                    printf("Testing Thrust Motor 2 (Left): 20%% forward\n");
                     rov.setThrustMotor1(0.0f);
-                    rov.setThrustMotor2(0.5f);
+                    rov.setThrustMotor2(0.2f);
                     rov.setBallast(0.0f);
                     break;
                     
-                case 2:  // Test both thrust motors forward (0.7)
-                    printf("Testing Both Thrust Motors: 70%% forward\n");
-                    rov.setThrust(0.7f);
+                case 2:  // Test both thrust motors forward (0.3)
+                    printf("Testing Both Thrust Motors: 30%% forward\n");
+                    rov.setThrust(0.3f);
                     rov.setBallast(0.0f);
                     break;
                     
-                case 3:  // Test both thrust motors backward (-0.5)
-                    printf("Testing Both Thrust Motors: 50%% backward\n");
-                    rov.setThrust(-0.5f);
+                case 3:  // Test both thrust motors backward (-0.2)
+                    printf("Testing Both Thrust Motors: 20%% backward\n");
+                    rov.setThrust(-0.2f);
                     rov.setBallast(0.0f);
                     break;
                     
@@ -309,6 +309,16 @@ int main() {
                     printf("Testing Ballast: Reverse -0.5 (exponential = -25%%)\n");
                     rov.setThrust(0.0f);
                     rov.setBallast(-0.5f);
+                    break;
+
+                case 8:  // Stop all motors
+                    printf("Stopping all motors\n");
+                    rov.stop();
+                    break;
+                
+                case 9:  // Emergency emerge - full ballast in reverse
+                    printf("Emergency Emerge: Full ballast in reverse\n");
+                    rov.emergencyEmerge();
                     break;
             }
             
