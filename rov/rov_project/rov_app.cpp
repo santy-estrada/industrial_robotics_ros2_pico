@@ -297,6 +297,7 @@ int main() {
                     printf("Testing Ballast: Medium power 0.7 (exponential = ~49%%)\n");
                     rov.setThrust(0.0f);
                     rov.setBallast(0.7f);
+                    rov.calibrateZeroDepth();  // Calibrate zero depth here
                     break;
                     
                 case 6:  // Test ballast full power (1.0 exponential = 100%)
@@ -319,6 +320,7 @@ int main() {
                 case 9:  // Emergency emerge - full ballast in reverse
                     printf("Emergency Emerge: Full ballast in reverse\n");
                     rov.emergencyEmerge();
+                    rov.calibrateZeroDepth();  // Calibrate zero depth here
                     break;
             }
             

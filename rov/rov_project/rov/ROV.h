@@ -28,8 +28,8 @@ private:
     float pressure_offset;     // Pressure offset for zero depth (to be calibrated)
     float pressure_to_depth_factor; // Conversion factor from pressure units to depth
 
-    // Calibrate 0 depth
-    float calibrated_zero_depth;  // Initialized to 0 by default
+    // Calibrate 0 depth - store raw pressure at zero depth
+    float zero_depth_pressure;  // Raw pressure reading at zero depth (initialized to 0)
     
     // Safety flag
     bool moisture_detected;    // true if water detected inside ROV

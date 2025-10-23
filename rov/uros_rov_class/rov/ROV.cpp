@@ -17,7 +17,7 @@ ROV::ROV(uint thrust1_ena, uint thrust1_in1, uint thrust1_in2,
       current_depth(0.0f),
       pressure_offset(0.0f),
       pressure_to_depth_factor(1.0f),
-      calibrated_zero_depth(0.0f),
+      zero_depth_pressure(0.0f),
       moisture_detected(false) {
     
     printf("ROV initialized successfully!\n");
@@ -32,9 +32,9 @@ float ROV::getDepth() {
     // Read pressure sensor
     float pressure_reading = pressure_sensor.readAveraged(5); // Averaged reading (5 samples)
     
-    // Apply placeholder conversion: depth = (pressure - offset) * factor
-    // User should calibrate these values based on their sensor and environment
-    current_depth = (pressure_reading - pressure_offset) * pressure_to_depth_factor - calibrated_zero_depth;
+    // Apply conversion: depth = (pressure - offset) * factor
+    // Then subtract the zero depth reference pressure to get relative depth
+    current_depth = ((pressure_reading - zero_depth_pressure) - pressure_offset) * pressure_to_depth_factor;
     
     // Ensure depth is non-negative
     if (current_depth < 0.0f) {
@@ -45,8 +45,9 @@ float ROV::getDepth() {
 }
 
 void ROV::calibrateZeroDepth() {
-    calibrated_zero_depth = getDepth();
-    printf("Calibrated zero depth at current depth: %.2f units\n", calibrated_zero_depth);
+    // Store the RAW pressure reading at the current "zero" depth
+    zero_depth_pressure = pressure_sensor.readAveraged(5);
+    printf("Calibrated zero depth at pressure: %.2f\n", zero_depth_pressure);
 }
 
 void ROV::setDepthConversion(float offset, float factor) {
