@@ -54,8 +54,11 @@ ScaraRobot::ScaraRobot(
     // Create servo motor and servo joint for joint 3
     printf("Creating Joint 3 servo motor and servo joint...\n");
     joint3_servo_motor = new ServoMotor(j3_servo_pwm);
-    joint3 = new ServoJoint('P', -50.0f, 50.0f, joint3_servo_motor, -1.0f);
-    
+    // Prismatic joint: -10mm to +5mm range (15mm total)
+    // Measured: 10° servo movement = 4mm joint movement (opposite direction)
+    // Gear ratio = -2.5 degrees per mm (negative for opposite direction)
+    joint3 = new ServoJoint('P', -10.0f, 5.0f, joint3_servo_motor, -2.5f);
+
     // Initialize safety pendant if pin is provided
     if (pendant_pin >= 0) {
         printf("Initializing safety pendant on pin %d...\n", pendant_pin);
