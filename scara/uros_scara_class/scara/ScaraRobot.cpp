@@ -54,10 +54,11 @@ ScaraRobot::ScaraRobot(
     // Create servo motor and servo joint for joint 3
     printf("Creating Joint 3 servo motor and servo joint...\n");
     joint3_servo_motor = new ServoMotor(j3_servo_pwm);
-    // Prismatic joint: -10mm to +5mm range (15mm total)
+    // Prismatic joint: -13mm to +10mm range (23mm total)
     // Measured: 10° servo movement = 4mm joint movement (opposite direction)
     // Gear ratio = -2.5 degrees per mm (negative for opposite direction)
-    joint3 = new ServoJoint('P', -10.0f, 5.0f, joint3_servo_motor, -2.5f);
+    // When 0mm tool position, servo is at 70° angle
+    joint3 = new ServoJoint('P', -13.0f, 10.0f, joint3_servo_motor, -2.5f);
 
     // Initialize safety pendant if pin is provided
     if (pendant_pin >= 0) {
@@ -220,6 +221,10 @@ void ScaraRobot::moveToConfiguration(float j1_angle, float j2_angle, float j3_po
         return;
     }
     
+    // Track last Joint 3 command to avoid redundant servo updates (prevents overshoot)
+    static float last_j3_position = 0.0f;
+    static bool j3_initialized = false;
+    
     // Calculate position errors for Joint 1 and Joint 2
     float j1_error = fabs(j1_angle - joint1->getCurrentPosition());
     float j2_error = fabs(j2_angle - joint2->getCurrentPosition());
@@ -247,10 +252,16 @@ void ScaraRobot::moveToConfiguration(float j1_angle, float j2_angle, float j3_po
     joint1->setSpeedScaleFactor(j1_scale);
     joint2->setSpeedScaleFactor(j2_scale);
     
-    // Set target positions for all joints
+    // Set target positions for revolute joints (updated every cycle for control loop)
     joint1->set_joint(j1_angle);
     joint2->set_joint(j2_angle);
-    joint3->moveToPosition(j3_position);
+    
+    // Only update Joint 3 (servo) when command actually changes (avoid overshoot from repetitive commands)
+    if (!j3_initialized || fabs(j3_position - last_j3_position) > 0.01f) {
+        joint3->moveToPosition(j3_position);
+        last_j3_position = j3_position;
+        j3_initialized = true;
+    }
 }
 
 void ScaraRobot::stopAllJoints() {

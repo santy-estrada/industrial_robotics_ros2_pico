@@ -23,8 +23,8 @@ ServoMotor::ServoMotor(uint pwm_pin, float min_angle_deg, float max_angle_deg,
     pwm_set_enabled(pwmSlice, true);
     
     // Initialize servo to middle position
-    float mid_angle = (min_angle + max_angle) / 2.0f;
-    setAngle(mid_angle);
+    // float mid_angle = (min_angle + max_angle) / 2.0f;
+    // setAngle(mid_angle);
     
     printf("ServoMotor created: Pin=%d, Range=[%.1f°, %.1f°], PWM=[%d, %d], Initial=%.1f°\n",
            PWM_PIN, min_angle, max_angle, min_pwm_value, max_pwm_value, current_angle);
