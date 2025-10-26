@@ -103,7 +103,7 @@ bool Joint::calibrateOrigin() {
     printf("=== Starting Joint Origin Calibration ===\n");
     printf("Joint will move between limits 3 times to find center position\n");
     
-    const float calibration_speed = 20.0f*resistance; // RPM for calibration movement
+    const float calibration_speed = 20.0f; // RPM for calibration movement
     const int num_measurements = 3;
     float min_positions[num_measurements]; // Store min limit positions
     float max_positions[num_measurements]; // Store max limit positions
