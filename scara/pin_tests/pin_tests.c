@@ -558,7 +558,7 @@ int main()
         // }
         if (scanf("%d", &angle) == 1) {
             // Map the angle value from 0-180 to 0-255
-            angle = map(angle, 0, 180, 977, 4883);
+            // angle = map(angle, 0, 180, 977, 4883);
 
             // Set the PWM duty cycle to change Servo Position
             uint slice_num = pwm_gpio_to_slice_num(PWM_SERVO);

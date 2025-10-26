@@ -12,11 +12,12 @@ ServoMotor::ServoMotor(uint pwm_pin, float min_angle_deg, float max_angle_deg,
     gpio_set_function(PWM_PIN, GPIO_FUNC_PWM);
     pwmSlice = pwm_gpio_to_slice_num(PWM_PIN);
     
-    // Set PWM frequency to 50Hz (20ms period) for standard servo
+    // Set PWM frequency to 50Hz (20ms period) for servo
     // System clock is 125MHz, so we need: 125MHz / (50Hz * TOP) = prescaler
     // For 50Hz with TOP = 39062: prescaler = 125000000 / (50 * 39062) ≈ 64
+    // Actual servo uses PWM range 500-2900 for 0-110° (measured via manual testing)
     pwm_set_clkdiv(pwmSlice, 64.0f);
-    pwm_set_wrap(pwmSlice, 39062);  // TOP value for 50Hz with prescaler 64
+    pwm_set_wrap(pwmSlice, 39060);  // TOP value for 50Hz with prescaler 64
     
     // Enable PWM
     pwm_set_enabled(pwmSlice, true);

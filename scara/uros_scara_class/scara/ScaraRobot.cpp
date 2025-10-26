@@ -54,7 +54,7 @@ ScaraRobot::ScaraRobot(
     // Create servo motor and servo joint for joint 3
     printf("Creating Joint 3 servo motor and servo joint...\n");
     joint3_servo_motor = new ServoMotor(j3_servo_pwm);
-    joint3 = new ServoJoint('P', -20.0f, 10.0f, joint3_servo_motor, -1.0f);
+    joint3 = new ServoJoint('P', -50.0f, 50.0f, joint3_servo_motor, -1.0f);
     
     // Initialize safety pendant if pin is provided
     if (pendant_pin >= 0) {

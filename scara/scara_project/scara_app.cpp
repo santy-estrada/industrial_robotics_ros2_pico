@@ -9,9 +9,9 @@
 // Test configuration defines - comment/uncomment to enable/disable tests
 // NOTE: TEST_FULL_SCARA is mutually exclusive with individual joint tests
 // #define TEST_FULL_SCARA
-#define TEST_JOINT1
+// #define TEST_JOINT1
 // #define TEST_JOINT2  
-// #define TEST_JOINT3
+#define TEST_JOINT3
 
 // SCARA Robot configuration
 #define LED_PIN 25
@@ -247,8 +247,8 @@ int main() {
 #ifdef TEST_JOINT3
     // Create servo motor and servo joint for joint 3
     printf("Creating Joint 3 servo motor and servo joint...\n");
-    ServoMotor joint3_servo_motor(JOINT3_SERVO_PWM);  // Using default values (0° to 180°)
-    ServoJoint joint3('P', -13.0f, 13.0f, &joint3_servo_motor, -1.0f);  // Prismatic joint, -12.5 to 12.5 mm, 1:1 gear ratio
+    ServoMotor joint3_servo_motor(JOINT3_SERVO_PWM);  // Using default values (0° to 110°)
+    ServoJoint joint3('P', -50.0f, 50.0f, &joint3_servo_motor, -1.0f);  // Prismatic joint, -50 to 50 mm, 1:-1 gear ratio
 #endif
     
     printf("Individual joints initialized successfully!\n");
@@ -263,7 +263,7 @@ int main() {
     joint2.calibrateOrigin();  // Set current position as 0°
 #endif
 #ifdef TEST_JOINT3
-    joint3.setOriginAt(90.0f);  // Set servo angle 90° as joint origin (0°)
+    joint3.setOriginAt(55.0f);  // Set servo angle 55° as joint origin (0°)
 #endif
     
     printf("\n=== Individual Joint Control Loop Starting ===\n");
@@ -350,7 +350,7 @@ int main() {
                     joint2.set_joint(30.0f);
 #endif
 #ifdef TEST_JOINT3
-                    joint3.setPosition(10.0f);
+                    joint3.setPosition(-10.0f);
 #endif
                     break;
                     
@@ -363,7 +363,7 @@ int main() {
                     joint2.set_joint(-45.0f);
 #endif
 #ifdef TEST_JOINT3
-                    joint3.setPosition(-10.0f);
+                    joint3.setPosition(-50.0f);
 #endif
                     break;
                     
@@ -376,7 +376,7 @@ int main() {
                     joint2.set_joint(0.0f);
 #endif
 #ifdef TEST_JOINT3
-                    joint3.setPosition(0.0f);
+                    joint3.setPosition(30.0f);
 #endif
                     break;
                     

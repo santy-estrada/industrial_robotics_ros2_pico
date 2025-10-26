@@ -30,18 +30,21 @@ void ServoJoint::update_position() {
     current_position = servo_to_joint_angle(servo_angle);
 }
 
-// Convert joint angle to servo angle (accounting for gear ratio and origin offset)
-float ServoJoint::joint_to_servo_angle(float joint_angle) {
-    // Apply gear ratio and origin offset
-    float servo_angle = (joint_angle * gear_ratio) + origin_offset;
+// Convert joint position to servo angle (accounting for gear ratio and origin offset)
+float ServoJoint::joint_to_servo_angle(float joint_position) {
+    // For prismatic joints: gear_ratio is degrees per mm
+    // For revolute joints: gear_ratio is standard gear ratio
+    // Formula: servo_angle = (joint_position * gear_ratio) + origin_offset
+    float servo_angle = (joint_position * gear_ratio) + origin_offset;
     return servo_angle;
 }
 
-// Convert servo angle to joint angle (accounting for gear ratio and origin offset)
+// Convert servo angle to joint position (accounting for gear ratio and origin offset)
 float ServoJoint::servo_to_joint_angle(float servo_angle) {
-    // Remove origin offset and apply gear ratio
-    float joint_angle = (servo_angle - origin_offset) / gear_ratio;
-    return joint_angle;
+    // Reverse of joint_to_servo_angle
+    // Formula: joint_position = (servo_angle - origin_offset) / gear_ratio
+    float joint_position = (servo_angle - origin_offset) / gear_ratio;
+    return joint_position;
 }
 
 // Setters

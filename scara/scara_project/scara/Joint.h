@@ -38,6 +38,9 @@ private:
     float q0_pos, q1_pos;       // PI coefficients for position control
     float error_pos[2];         // Position error history: e(k), e(k-1)
     
+    // Synchronized motion support
+    float speed_scale_factor;    // Scaling factor for synchronized motion (1.0 = normal speed)
+    
     // Private methods
     float position_control();     // Position control implementation
     float position_control_internal(float current_pos, float desired_pos); // Internal position control without origin check
@@ -74,16 +77,17 @@ public:
     char getType() const;
     float getMinLimit() const;
     float getMaxLimit() const;
-    float getCurrentPosition() const;           // Only getter - no setter
+    float getCurrentPosition();           // Only getter - no setter
     float getDesiredPosition() const;
-    float getCurrentSpeed() const;              // Only getter - no setter
+    float getCurrentSpeed();              // Only getter - no setter
     float getGearRatio() const;
     float getErrorPosition() const;
     bool isOriginSet() const;
     
     // Control methods
     void set_joint();                           // Update position, speed, and run control
-    void set_joint(float desired_position);                              // Update position, speed, and run control
+    void set_joint(float desired_position);     // Update position, speed, and run control
+    void setSpeedScaleFactor(float scale);      // Set speed scaling for synchronized motion (0.0-1.0)
     void stop();                                // Stop the joint motor
     
     // Safety methods

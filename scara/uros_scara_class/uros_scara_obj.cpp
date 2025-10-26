@@ -281,7 +281,7 @@ int main() {
 
     // CRITICAL: Calibrate BEFORE starting timers to avoid timing conflicts
     g_scara_robot->calibrateRevoluteJoints();  // Calibrates joint2 then joint1
-    g_scara_robot->calibrateServoJoint(90.0f); // Set servo 90° as joint origin (0°)
+    g_scara_robot->calibrateServoJoint(55.0f); // Set servo 55° as joint origin (0°)
     system_calibrated = true;
 
     //Indicate system calibrated successfully
