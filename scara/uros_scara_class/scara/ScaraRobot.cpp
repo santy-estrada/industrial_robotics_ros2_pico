@@ -49,7 +49,7 @@ ScaraRobot::ScaraRobot(
     // Create SCARA joint 2
     printf("Creating SCARA Joint 2...\n");
     joint2 = new Joint('R', -120.0f, 120.0f, joint2_motor, 4.0f, 
-                       joint2_limit_min, joint2_limit_max, 1.3f);
+                       joint2_limit_min, joint2_limit_max, 1.0f);
     
     // Create servo motor and servo joint for joint 3
     printf("Creating Joint 3 servo motor and servo joint...\n");
@@ -217,8 +217,32 @@ void ScaraRobot::moveToConfiguration(float j1_angle, float j2_angle, float j3_po
         return;
     }
     
-    printf("Moving SCARA to configuration: J1=%.2f°, J2=%.2f°, J3=%.2f\n", 
-           j1_angle, j2_angle, j3_position);
+    // Calculate position errors for Joint 1 and Joint 2
+    float j1_error = fabs(j1_angle - joint1->getCurrentPosition());
+    float j2_error = fabs(j2_angle - joint2->getCurrentPosition());
+    
+    // Find the maximum error (this joint will move at full speed)
+    float max_error = (j1_error > j2_error) ? j1_error : j2_error;
+    
+    // Calculate speed scale factors for synchronized motion
+    // The joint with the largest error moves at full speed (scale = 1.0)
+    // The other joint moves proportionally slower so they finish together
+    float j1_scale = 1.0f;
+    float j2_scale = 1.0f;
+    
+    if (max_error > 0.5f) {  // Only apply scaling if movement is significant
+        j1_scale = (j1_error / max_error);
+        j2_scale = (j2_error / max_error);
+        
+        // Ensure minimum speed to avoid stalling
+        const float min_scale = 0.3f;
+        if (j1_scale < min_scale && j1_error > 0.15f) j1_scale = min_scale;
+        if (j2_scale < min_scale && j2_error > 0.15f) j2_scale = min_scale;
+    }
+    
+    // Apply speed scaling to joints
+    joint1->setSpeedScaleFactor(j1_scale);
+    joint2->setSpeedScaleFactor(j2_scale);
     
     // Set target positions for all joints
     joint1->set_joint(j1_angle);

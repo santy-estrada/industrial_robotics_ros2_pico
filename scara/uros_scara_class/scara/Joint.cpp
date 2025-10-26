@@ -11,7 +11,7 @@ Joint::Joint(char joint_type, float min_lim, float max_lim,
       limit_switch_min(limit_min), limit_switch_max(limit_max),
       origin_set(false), resistance(resistance_value),
       use_pi_controller(false), kp_pos(0.0f), ti_pos(0.0f), 
-      q0_pos(0.0f), q1_pos(0.0f) {
+      q0_pos(0.0f), q1_pos(0.0f), speed_scale_factor(1.0f) {
     
     // Initialize error array for PI controller (not used with threshold controller)
     error_pos[0] = 0.0f;
@@ -31,7 +31,7 @@ Joint::Joint(char joint_type, float min_lim, float max_lim,
       motor(precision_motor), gear_ratio(gear_ratio_value),
       limit_switch_min(limit_min), limit_switch_max(limit_max),
       origin_set(false), resistance(resistance_value),
-      use_pi_controller(true), kp_pos(kp), ti_pos(ti) {
+      use_pi_controller(true), kp_pos(kp), ti_pos(ti), speed_scale_factor(1.0f) {
     
     // Initialize error array for PI controller
     error_pos[0] = 0.0f;
@@ -395,7 +395,8 @@ float Joint::position_control_internal(float current_pos, float desired_pos) {
         }
     }
 
-    return position_control_output*resistance;
+    // Apply speed scaling for synchronized motion
+    return position_control_output * resistance * speed_scale_factor;
 }
 
 void Joint::move_to_position_internal(float target_motor_degrees, float max_speed) {
@@ -497,6 +498,16 @@ void Joint::stop() {
     }
 }
 
+void Joint::setSpeedScaleFactor(float scale) {
+    // Clamp scale factor between 0.0 and 1.0
+    if (scale < 0.0f) {
+        speed_scale_factor = 0.0f;
+    } else if (scale > 1.0f) {
+        speed_scale_factor = 1.0f;
+    } else {
+        speed_scale_factor = scale;
+    }
+}
 
 // Safety methods
 bool Joint::isAtMinLimit() const {
