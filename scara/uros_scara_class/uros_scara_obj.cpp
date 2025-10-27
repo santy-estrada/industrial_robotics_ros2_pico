@@ -62,6 +62,7 @@ ScaraRobot* g_scara_robot = nullptr;
 
 // Timing configuration
 #define CONTROL_TIMER_PERIOD_MS 50    // 20Hz control loop
+#define PUBLISHER_TIMER_PERIOD_MS 100 // 10Hz measurements publishing
 #define DEBUG_TIMER_PERIOD_MS 500     // 2Hz debug publishing
 
 
@@ -113,7 +114,7 @@ void scara_conf_subscription_callback(const void * msgin) {
     printf("SCARA: Command accepted - conf[%.2f, %.2f, %.2f]\n", conf[0], conf[1], conf[2]);
 }
 
-// Timer callback to perform control and publish state every 50ms
+// Timer callback to perform control only
 void control_timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
 
     if (timer == nullptr) {
@@ -124,10 +125,16 @@ void control_timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
         return;
     }
     
-    
     // Update all joint states (includes safety pendant check)
     g_scara_robot->moveToConfiguration(conf[0], conf[1], conf[2]);
+}
 
+// Timer callback to publish measurements
+void pub_measurements_timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
+
+    if (timer == nullptr) {
+        return;
+    }
 
     // Prepare and publish joint measurements message
     // Map joint positions to linear fields, joint speeds to angular fields
@@ -202,6 +209,7 @@ int main() {
     // Initialize ROS2 components
     rcl_timer_t debug_timer;
     rcl_timer_t control_timer;
+    rcl_timer_t measurements_timer;
     rcl_node_t node;
     rcl_allocator_t allocator = rcl_get_default_allocator();
     rclc_support_t support;
@@ -257,6 +265,14 @@ int main() {
         control_timer_callback
     );
 
+    // Initialize the timer for measurements publishing (100ms interval)
+    rclc_timer_init_default(
+        &measurements_timer,
+        &support,
+        RCL_MS_TO_NS(PUBLISHER_TIMER_PERIOD_MS),
+        pub_measurements_timer_callback
+    );
+
     // Initialize the subscriber to receive Twist messages with configuration
     rclc_subscription_init_default(
         &scara_conf_subs,
@@ -266,8 +282,8 @@ int main() {
     );
 
 
-    // Initialize executor
-    rclc_executor_init(&executor, &support.context, 3, &allocator);
+    // Initialize executor (1 subscription + 3 timers = 4 handles)
+    rclc_executor_init(&executor, &support.context, 4, &allocator);
     
     rclc_executor_add_subscription(&executor, &scara_conf_subs, &conf_msg, &scara_conf_subscription_callback, ON_NEW_DATA);
 
@@ -307,6 +323,7 @@ int main() {
     // Add timers AFTER calibration is complete
     rclc_executor_add_timer(&executor, &debug_timer);
     rclc_executor_add_timer(&executor, &control_timer);
+    rclc_executor_add_timer(&executor, &measurements_timer);
 
     //Leave led on
     gpio_put(LED_PIN, 1);
