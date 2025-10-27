@@ -33,7 +33,7 @@ ScaraRobot::ScaraRobot(
     // Create SCARA joint 1
     printf("Creating SCARA Joint 1...\n");
     joint1 = new Joint('R', -80.0f, 80.0f, joint1_motor, 4.0f, 
-                       joint1_limit_min, joint1_limit_max, 1.3f);
+                       joint1_limit_min, joint1_limit_max, 1.5f);
     
     // Create precision motor for joint 2
     printf("Creating Joint 2 precision motor...\n");
