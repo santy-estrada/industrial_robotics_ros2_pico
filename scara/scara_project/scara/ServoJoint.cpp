@@ -9,7 +9,7 @@ ServoJoint::ServoJoint(char joint_type, float min_lim, float max_lim,
       current_position(0.0f), gear_ratio(gear_ratio_value),
       servo_motor(servo_motor_ptr), origin_set(false), origin_offset(0.0f) {
     
-    printf("ServoJoint created: Type=%c, Limits=[%.2f mm, %.2f mm], GearRatio=%.2f mm/°\n", 
+    printf("ServoJoint created: Type=%c, Limits=[%.2f, %.2f], GearRatio=%.2f\n", 
            type, min_limit, max_limit, gear_ratio);
     
     // Initialize current position
@@ -27,34 +27,35 @@ void ServoJoint::update_position() {
     if (servo_motor == nullptr) return;
     
     float servo_angle = servo_motor->getCurrentAngle();
-    current_position = servo_to_joint_angle(servo_angle);  // This returns distance in mm
+    current_position = servo_to_joint_angle(servo_angle);
 }
 
-// Convert joint distance to servo angle (accounting for gear ratio and origin offset)
-float ServoJoint::joint_to_servo_angle(float joint_distance) {
-    // joint_distance (mm) -> servo_angle (degrees)
-    // servo_angle = (joint_distance / gear_ratio) + origin_offset
-    float servo_angle = (joint_distance / gear_ratio) + origin_offset;
+// Convert joint position to servo angle (accounting for gear ratio and origin offset)
+float ServoJoint::joint_to_servo_angle(float joint_position) {
+    // For prismatic joints: gear_ratio is degrees per mm
+    // For revolute joints: gear_ratio is standard gear ratio
+    // Formula: servo_angle = (joint_position * gear_ratio) + origin_offset
+    float servo_angle = (joint_position * gear_ratio) + origin_offset;
     return servo_angle;
 }
 
-// Convert servo angle to joint distance (accounting for gear ratio and origin offset)
+// Convert servo angle to joint position (accounting for gear ratio and origin offset)
 float ServoJoint::servo_to_joint_angle(float servo_angle) {
-    // servo_angle (degrees) -> joint_distance (mm)  
-    // joint_distance = (servo_angle - origin_offset) * gear_ratio
-    float joint_distance = (servo_angle - origin_offset) * gear_ratio;
-    return joint_distance;
+    // Reverse of joint_to_servo_angle
+    // Formula: joint_position = (servo_angle - origin_offset) / gear_ratio
+    float joint_position = (servo_angle - origin_offset) / gear_ratio;
+    return joint_position;
 }
 
 // Setters
 void ServoJoint::setMinLimit(float min_lim) {
     min_limit = min_lim;
-    printf("ServoJoint min limit set to %.2f mm\n", min_limit);
+    printf("ServoJoint min limit set to %.2f\n", min_limit);
 }
 
 void ServoJoint::setMaxLimit(float max_lim) {
     max_limit = max_lim;
-    printf("ServoJoint max limit set to %.2f mm\n", max_limit);
+    printf("ServoJoint max limit set to %.2f\n", max_limit);
 }
 
 void ServoJoint::setOrigin() {
@@ -63,13 +64,11 @@ void ServoJoint::setOrigin() {
         return;
     }
     
-    // Set current servo position as the origin (0 mm) for joint coordinates
+    // Set current servo position as the origin (0°) for joint coordinates
     origin_offset = servo_motor->getCurrentAngle();
     origin_set = true;
-    // Limits remain unchanged - they are physical constraints in mm
-
-    printf("Origin set at current servo position (%.2f°) - Joint position is now 0.0 mm\n", origin_offset);
-    printf("Joint limits remain: [%.2f mm, %.2f mm] (physical constraints)\n", min_limit, max_limit);
+    
+    printf("Origin set at current servo position (%.2f°)\n", origin_offset);
     update_position();  // Recalculate position with new origin
 }
 
@@ -79,18 +78,14 @@ void ServoJoint::setOriginAt(float servo_origin_angle) {
         return;
     }
     
-    // The servo_origin_angle will be the servo position that corresponds to joint position 0mm
-    // Conversion: joint_distance = (servo_angle - servo_origin_angle) * gear_ratio
+    // The servo_origin_angle will be the servo position that corresponds to joint position 0°
+    // So: joint_angle = (servo_angle - servo_origin_angle) / gear_ratio
+    // Therefore: origin_offset = servo_origin_angle
     origin_offset = servo_origin_angle;
     origin_set = true;
     
-    // The limits are already in joint units (mm), so they don't need to be adjusted
-    // They represent the physical constraints of the joint mechanism
-    // min_limit and max_limit should remain unchanged as they are the physical limits
-    
-    printf("Origin set: Servo angle %.2f° now corresponds to joint position 0.0mm\n", servo_origin_angle);
+    printf("Origin set: Servo angle %.2f° now corresponds to joint angle 0.0°\n", servo_origin_angle);
     printf("Origin offset set to: %.2f°\n", origin_offset);
-    printf("Joint limits remain: [%.2f mm, %.2f mm] (physical constraints)\n", min_limit, max_limit);
     
     // Move servo to the origin position
     servo_motor->setAngle(servo_origin_angle);
@@ -100,12 +95,12 @@ void ServoJoint::setOriginAt(float servo_origin_angle) {
 
 bool ServoJoint::setPosition(float position) {
     if (!isWithinLimits(position)) {
-        printf("WARNING: Position %.2f mm is outside limits [%.2f mm, %.2f mm]\n", 
+        printf("WARNING: Position %.2f is outside limits [%.2f, %.2f]\n", 
                position, min_limit, max_limit);
         return false;
     }
     
-    return moveToPosition(position);  // Remove the negative sign - position should be used directly
+    return moveToPosition(position);
 }
 
 // Getters
@@ -146,18 +141,18 @@ bool ServoJoint::moveToPosition(float target_position) {
     }
     
     if (!isWithinLimits(target_position)) {
-        printf("WARNING: Target position %.2f mm is outside limits [%.2f mm, %.2f mm]\n", 
+        printf("WARNING: Target position %.2f is outside limits [%.2f, %.2f]\n", 
                target_position, min_limit, max_limit);
         return false;
     }
     
-    // Convert joint position (mm) to servo angle (degrees)
+    // Convert joint position to servo angle
     float target_servo_angle = joint_to_servo_angle(target_position);
     
     // Check if servo angle is within servo motor limits
     if (target_servo_angle < servo_motor->getMinAngle() || 
         target_servo_angle > servo_motor->getMaxAngle()) {
-        printf("ERROR: Target joint position %.2f mm requires servo angle %.2f° which is outside servo limits [%.2f°, %.2f°]\n",
+        printf("ERROR: Target joint position %.2f° requires servo angle %.2f° which is outside servo limits [%.2f°, %.2f°]\n",
                target_position, target_servo_angle, servo_motor->getMinAngle(), servo_motor->getMaxAngle());
         return false;
     }
@@ -168,7 +163,7 @@ bool ServoJoint::moveToPosition(float target_position) {
     // Update current position
     update_position();
     
-    printf("ServoJoint moved to %.2f mm (servo: %.2f°)\n", current_position, target_servo_angle);
+    printf("ServoJoint moved to %.2f° (servo: %.2f°)\n", current_position, target_servo_angle);
     
     return success;
 }

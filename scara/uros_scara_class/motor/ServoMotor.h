@@ -27,8 +27,9 @@ private:
 
 public:
     // Constructor
-    ServoMotor(uint pwm_pin, float min_angle_deg = 0.0f, float max_angle_deg = 180.0f,
-               uint16_t min_pwm = 977, uint16_t max_pwm = 4883);
+    // Default PWM range: 500-2900 for 0-110° (measured via manual testing)
+    ServoMotor(uint pwm_pin, float min_angle_deg = 0.0f, float max_angle_deg = 110.0f,
+               uint16_t min_pwm = 500, uint16_t max_pwm = 2900);
     
     // Servo control methods
     bool setAngle(float angle_degrees);          // Set servo to specific angle

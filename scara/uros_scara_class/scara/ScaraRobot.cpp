@@ -33,7 +33,7 @@ ScaraRobot::ScaraRobot(
     // Create SCARA joint 1
     printf("Creating SCARA Joint 1...\n");
     joint1 = new Joint('R', -80.0f, 80.0f, joint1_motor, 4.0f, 
-                       joint1_limit_min, joint1_limit_max, 1.0f);
+                       joint1_limit_min, joint1_limit_max, 1.3f);
     
     // Create precision motor for joint 2
     printf("Creating Joint 2 precision motor...\n");
@@ -49,13 +49,17 @@ ScaraRobot::ScaraRobot(
     // Create SCARA joint 2
     printf("Creating SCARA Joint 2...\n");
     joint2 = new Joint('R', -120.0f, 120.0f, joint2_motor, 4.0f, 
-                       joint2_limit_min, joint2_limit_max, 1.3f);
+                       joint2_limit_min, joint2_limit_max, 1.8f);
     
     // Create servo motor and servo joint for joint 3
     printf("Creating Joint 3 servo motor and servo joint...\n");
     joint3_servo_motor = new ServoMotor(j3_servo_pwm);
-    joint3 = new ServoJoint('P', -20.0f, 10.0f, joint3_servo_motor, -1.0f);
-    
+    // Prismatic joint: -15mm to +5mm range (20mm total)
+    // Measured: 10° servo movement = 4mm joint movement (opposite direction)
+    // Gear ratio = -2.5 degrees per mm (negative for opposite direction)
+    // When 0mm tool position, servo is at 55° angle
+    joint3 = new ServoJoint('P', -15.0f, 10.0f, joint3_servo_motor, -2.5f);
+
     // Initialize safety pendant if pin is provided
     if (pendant_pin >= 0) {
         printf("Initializing safety pendant on pin %d...\n", pendant_pin);
@@ -217,13 +221,75 @@ void ScaraRobot::moveToConfiguration(float j1_angle, float j2_angle, float j3_po
         return;
     }
     
-    printf("Moving SCARA to configuration: J1=%.2f°, J2=%.2f°, J3=%.2f\n", 
-           j1_angle, j2_angle, j3_position);
+    // Track Joint 3 state for incremental movement (prevents overshoot from inertia)
+    static float last_j3_position = 0.0f;
+    static float j3_target_position = 0.0f;
+    static float j3_current_step = 0.0f;
+    static bool j3_initialized = false;
     
-    // Set target positions for all joints
+    // Calculate position errors for Joint 1 and Joint 2
+    float j1_error = fabs(j1_angle - joint1->getCurrentPosition());
+    float j2_error = fabs(j2_angle - joint2->getCurrentPosition());
+    
+    // Find the maximum error (this joint will move at full speed)
+    float max_error = (j1_error > j2_error) ? j1_error : j2_error;
+    
+    // Calculate speed scale factors for synchronized motion
+    // The joint with the largest error moves at full speed (scale = 1.0)
+    // The other joint moves proportionally slower so they finish together
+    float j1_scale = 1.0f;
+    float j2_scale = 1.0f;
+    
+    if (max_error > 0.5f) {  // Only apply scaling if movement is significant
+        j1_scale = (j1_error / max_error);
+        j2_scale = (j2_error / max_error);
+        
+        // Ensure minimum speed to avoid stalling
+        const float min_scale = 0.3f;
+        if (j1_scale < min_scale && j1_error > 0.15f) j1_scale = min_scale;
+        if (j2_scale < min_scale && j2_error > 0.15f) j2_scale = min_scale;
+    }
+    
+    // Apply speed scaling to joints
+    joint1->setSpeedScaleFactor(j1_scale);
+    joint2->setSpeedScaleFactor(j2_scale);
+    
+    // Set target positions for revolute joints (updated every cycle for control loop)
     joint1->set_joint(j1_angle);
     joint2->set_joint(j2_angle);
-    joint3->moveToPosition(j3_position);
+    
+    // Incremental servo movement to reduce overshoot from inertia
+    // Check if new target received (threshold 0.1mm to filter noise)
+    if (!j3_initialized || fabs(j3_position - j3_target_position) > 0.1f) {
+        // New target - reset incremental movement
+        j3_target_position = j3_position;
+        j3_current_step = joint3->getCurrentPosition(); // Start from current position
+        j3_initialized = true;
+        printf("Joint 3 new target: %.2fmm (current: %.2fmm)\n", j3_target_position, j3_current_step);
+    }
+    
+    // Incremental movement: move in small steps towards target
+    const float step_size = 2.0f;  // Move 2mm per control cycle (50ms)
+    float error = j3_target_position - j3_current_step;
+    
+    if (fabs(error) > 0.1f) {  // Still need to move
+        // Calculate next step position
+        if (fabs(error) > step_size) {
+            // Move one step in the direction of target
+            j3_current_step += (error > 0) ? step_size : -step_size;
+        } else {
+            // Close enough - go directly to target
+            j3_current_step = j3_target_position;
+        }
+        
+        // Only command servo if position changed significantly
+        if (fabs(j3_current_step - last_j3_position) > 0.1f) {
+            joint3->moveToPosition(j3_current_step);
+            last_j3_position = j3_current_step;
+            printf("Joint 3 step: %.2fmm (target: %.2fmm, error: %.2fmm)\n", 
+                   j3_current_step, j3_target_position, error);
+        }
+    }
 }
 
 void ScaraRobot::stopAllJoints() {

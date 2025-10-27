@@ -15,19 +15,19 @@ private:
     
     // Position and gear ratio
     float current_position;      // Current position in joint coordinates
-    float gear_ratio;            // Motor shaft revolutions per joint revolution
+    float gear_ratio;            // For prismatic: degrees per mm, For revolute: gear ratio
     
     // Servo motor
     ServoMotor* servo_motor;     // Pointer to servo motor
     
     // Origin calibration
     bool origin_set;             // Flag indicating if origin has been calibrated
-    float origin_offset;         // Offset angle for origin calibration
+    float origin_offset;         // Servo angle corresponding to joint position 0
     
     // Helper methods
     void update_position();      // Update current position from servo
-    float joint_to_servo_angle(float joint_angle);  // Convert joint angle to servo angle
-    float servo_to_joint_angle(float servo_angle);  // Convert servo angle to joint angle
+    float joint_to_servo_angle(float joint_position);  // Convert joint position to servo angle
+    float servo_to_joint_angle(float servo_angle);     // Convert servo angle to joint position
 
 public:
     // Constructor
