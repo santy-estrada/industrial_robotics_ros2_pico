@@ -17,11 +17,11 @@ void PrecisionMotor::encoder_irq_handler(uint gpio, uint32_t events) {
 PrecisionMotor::PrecisionMotor(uint ena_pin, uint in1_pin, uint in2_pin,
                                uint enc_a_pin, uint enc_b_pin,
                                int ticks_per_rev, float gear_ratio,float dt,
-                               float kp, float ti, float td)
+                               float kp, float ti, float td, float dead_zone)
     : Motor(ena_pin, in1_pin, in2_pin),
       ENCODER_A_PIN(enc_a_pin), ENCODER_B_PIN(enc_b_pin),
       TICKS_PER_REV(ticks_per_rev), GEAR_RATIO(gear_ratio), dt(dt),
-      Kp(kp), Ti(ti), Td(td),
+      Kp(kp), Ti(ti), Td(td), dead_zone(dead_zone),
       encoder_ticks(0), last_ticks(0), filtered_rpm(0.0f), 
       setpoint_percentage(0.0f), control_output(0.0f) {
     
@@ -120,7 +120,7 @@ void PrecisionMotor::set_motor(float desired_speed) {
     // Calculate control signal using PID
     float u = calculate_pid_control(measured_speed);
     
-    // Store the control output (with sign) for reporting and next iteration
+    // Store the control output for next iteration
     control_output = u;
 
     // Set direction and apply control

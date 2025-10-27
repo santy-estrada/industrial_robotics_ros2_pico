@@ -360,6 +360,8 @@ float Joint::position_control_internal(float current_pos, float desired_pos) {
         // Check tolerance FIRST for PI controller
         if (fabs(error_pos[0]) < tolerance) {
             position_control_output = 0.0f;  // Stop motor when within tolerance
+            // Reset error history when within tolerance to prevent integral windup
+            error_pos[1] = 0.0f;
         } else {
             // PI Controller implementation - uses both error_pos[0] and error_pos[1]
             position_control_output = q0_pos * error_pos[0] + q1_pos * error_pos[1];
@@ -384,6 +386,8 @@ float Joint::position_control_internal(float current_pos, float desired_pos) {
         
         if (fabs(error) < tolerance) {
             position_control_output = 0.0f;
+            // Reset error history when stopped to ensure clean start on next movement
+            error_pos[1] = 0.0f;
         } else if (fabs(error) < 2) {
             position_control_output = (error < 0) ? -6 : 6;
         } else if (fabs(error) < 10) {

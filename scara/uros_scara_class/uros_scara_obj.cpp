@@ -280,9 +280,19 @@ int main() {
     }
 
     // CRITICAL: Calibrate BEFORE starting timers to avoid timing conflicts
-    g_scara_robot->calibrateServoJoint(70.0f); // Set servo 70° as joint origin (0°)
-    g_scara_robot->moveJoint3(-13.0f);      // Move joint 3 to -13mm (minimum position)
+    // Temporarily disable safety pendant for calibration sequence
+    g_scara_robot->disableSafetyPendant();
+    
+    g_scara_robot->calibrateServoJoint(55.0f); // Set servo 55° as joint origin (0mm)
+    sleep_ms(100);  // Let servo reach position
+    g_scara_robot->moveJoint3(-13.0f);         // Move joint 3 to safe position before calibration
+    sleep_ms(500);  // Give servo time to reach position
+    
     g_scara_robot->calibrateRevoluteJoints();  // Calibrates joint2 then joint1
+    
+    // Re-enable safety pendant after calibration
+    g_scara_robot->enableSafetyPendant(SAFETY_PENDANT_PIN);
+    
     system_calibrated = true;
 
     //Indicate system calibrated successfully
@@ -297,6 +307,9 @@ int main() {
     // Add timers AFTER calibration is complete
     rclc_executor_add_timer(&executor, &debug_timer);
     rclc_executor_add_timer(&executor, &control_timer);
+
+    //Leave led on
+    gpio_put(LED_PIN, 1);
     
 
     while (true) {
