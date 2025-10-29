@@ -32,6 +32,11 @@ private:
     float filtered_rpm;
     static constexpr float alpha = 0.15f;  // Low-pass filter coefficient
 
+    // Dead zone compensation variables
+    float dead_zone_start;     // PWM% to overcome static friction (breakaway)
+    float dead_zone_running;   // Minimum PWM% to maintain motion (kinetic friction)
+    float dead_zone_stop;      // Below this threshold, force stop
+
     // Static map to route interrupts to correct motor instance
     static std::map<uint, PrecisionMotor*> motor_map;
     static bool interrupt_initialized;
@@ -48,6 +53,7 @@ private:
     float apply_low_pass_filter(float raw_rpm);
     void calculate_rpm(float* revs, float* rpm);
     void set_setpoint(float rpm);
+    float apply_dead_zone_compensation(float u);
 
 
 public:
@@ -55,13 +61,17 @@ public:
     PrecisionMotor(uint ena_pin, uint in1_pin, uint in2_pin,
                    uint enc_a_pin, uint enc_b_pin, 
                    int ticks_per_rev = 28, float gear_ratio = 150.0f, float dt = 0.1f,
-                   float kp = 0.7458f, float ti = 0.5000f, float td = 2.5000e-05f);
+                   float kp = 0.7458f, float ti = 0.5000f, float td = 2.5000e-05f,
+                   float dz_start = 10.0f, float dz_running = 5.0f, float dz_stop = 3.0f);
 
     // Precision motor control methods
     void set_motor(float desired_speed);
 
     //Reset encoder ticks to set a new origin
     void reset_encoder_ticks();
+    
+    //Reset PID state (clear error history and control output)
+    void reset_pid_state();
     
     // Getters
     float get_setpoint() const;

@@ -1,7 +1,7 @@
 #include "Motor.h"
 
 Motor::Motor(uint ena_pin, uint in1_pin, uint in2_pin)
-    : ENA_PIN(ena_pin), IN1_PIN(in1_pin), IN2_PIN(in2_pin), PWM_POWER(0.0f) {
+    : ENA_PIN(ena_pin), IN1_PIN(in1_pin), IN2_PIN(in2_pin), PWM_POWER(0.0f), is_moving(false) {
     
     // Initialize direction control pins
     gpio_init(IN1_PIN);
@@ -25,6 +25,7 @@ void Motor::moveFwd(float power) {
     gpio_put(IN1_PIN, 1);
     gpio_put(IN2_PIN, 0);
     applyPwmPower();
+    is_moving = true;  // Mark motor as moving
 }
 
 void Motor::moveBckwd(float power) {
@@ -32,6 +33,7 @@ void Motor::moveBckwd(float power) {
     gpio_put(IN1_PIN, 0);
     gpio_put(IN2_PIN, 1);
     applyPwmPower();
+    is_moving = true;  // Mark motor as moving
 }
 
 void Motor::stop() {
@@ -39,6 +41,7 @@ void Motor::stop() {
     gpio_put(IN2_PIN, 0);
     setPwmPower(0.0f);
     applyPwmPower();
+    is_moving = false;  // Mark motor as stopped
 }
 
 float Motor::getPwmPower() const {
@@ -50,6 +53,10 @@ void Motor::setPwmPower(float power) {
     if (power < 0.0f) power = 0.0f;
     if (power > 100.0f) power = 100.0f;
     PWM_POWER = power;
+}
+
+bool Motor::isMoving() const {
+    return is_moving;
 }
 
 void Motor::applyPwmPower() {

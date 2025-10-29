@@ -125,11 +125,12 @@ bool Joint::calibrateOrigin() {
                 break;
             }
             motor->set_motor(-calibration_speed);
-            sleep_ms(50);
+            sleep_ms((int)(motor->get_dt() * 1000));  // Use motor's dt for sleep interval
         }
         
         motor->set_motor(0.0f);
         motor->stop();
+        motor->reset_pid_state();  // Clear PID integral windup
         sleep_ms(500);
         
         min_positions[i] = motor->get_position_degrees();
@@ -145,11 +146,12 @@ bool Joint::calibrateOrigin() {
                 break;
             }
             motor->set_motor(calibration_speed);
-            sleep_ms(50);
+            sleep_ms((int)(motor->get_dt() * 1000));  // Use motor's dt for sleep interval
         }
         
         motor->set_motor(0.0f);
         motor->stop();
+        motor->reset_pid_state();  // Clear PID integral windup
         sleep_ms(500);
 
         max_positions[i] = motor->get_position_degrees();
@@ -360,6 +362,8 @@ float Joint::position_control_internal(float current_pos, float desired_pos) {
         // Check tolerance FIRST for PI controller
         if (fabs(error_pos[0]) < tolerance) {
             position_control_output = 0.0f;  // Stop motor when within tolerance
+            // Reset error history when within tolerance to prevent integral windup
+            error_pos[1] = 0.0f;
         } else {
             // PI Controller implementation - uses both error_pos[0] and error_pos[1]
             position_control_output = q0_pos * error_pos[0] + q1_pos * error_pos[1];
@@ -384,14 +388,20 @@ float Joint::position_control_internal(float current_pos, float desired_pos) {
         
         if (fabs(error) < tolerance) {
             position_control_output = 0.0f;
+            // Reset error history when stopped to ensure clean start on next movement
+            error_pos[1] = 0.0f;
         } else if (fabs(error) < 2) {
-            position_control_output = (error < 0) ? -6 : 6;
-        } else if (fabs(error) < 10) {
+            position_control_output = (error < 0) ? -5 : 5;
+        } else if (fabs(error) < 5) {
             position_control_output = (error < 0) ? -7 : 7;
-        } else if (fabs(error) < 15) {
+        } else if (fabs(error) < 10) {
             position_control_output = (error < 0) ? -10 : 10;
+        } else if (fabs(error) < 15) {
+            position_control_output = (error < 0) ? -18 : 18;
+        } else if (fabs(error) < 25) {
+            position_control_output = (error < 0) ? -25 : 25;
         } else {
-            position_control_output = (error < 0) ? -12 : 12;
+            position_control_output = (error < 0) ? -40 : 40;
         }
     }
 
@@ -434,7 +444,7 @@ void Joint::move_to_position_internal(float target_motor_degrees, float max_spee
         
         
         printf("Moving to target... remaining: %.2f degrees\n", error_degrees);
-        sleep_ms(50);
+        sleep_ms(((int)(motor->get_dt() * 1000)));  // Use motor's dt for sleep interval
     }
     
     // Stop at target position

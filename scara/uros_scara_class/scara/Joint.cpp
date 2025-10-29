@@ -125,7 +125,7 @@ bool Joint::calibrateOrigin() {
                 break;
             }
             motor->set_motor(-calibration_speed);
-            sleep_ms(50);
+            sleep_ms((int)(motor->get_dt() * 1000));  // Use motor's dt for sleep interval
         }
         
         motor->set_motor(0.0f);
@@ -145,7 +145,7 @@ bool Joint::calibrateOrigin() {
                 break;
             }
             motor->set_motor(calibration_speed);
-            sleep_ms(50);
+            sleep_ms((int)(motor->get_dt() * 1000));  // Use motor's dt for sleep interval
         }
         
         motor->set_motor(0.0f);
@@ -438,7 +438,7 @@ void Joint::move_to_position_internal(float target_motor_degrees, float max_spee
         
         
         printf("Moving to target... remaining: %.2f degrees\n", error_degrees);
-        sleep_ms(50);
+        sleep_ms(((int)(motor->get_dt() * 1000)));  // Use motor's dt for sleep interval
     }
     
     // Stop at target position

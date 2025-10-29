@@ -10,8 +10,8 @@
 // NOTE: TEST_FULL_SCARA is mutually exclusive with individual joint tests
 // #define TEST_FULL_SCARA
 // #define TEST_JOINT1
-// #define TEST_JOINT2  
-#define TEST_JOINT3
+#define TEST_JOINT2  
+// #define TEST_JOINT3
 
 // SCARA Robot configuration
 #define LED_PIN 25
@@ -231,7 +231,8 @@ int main() {
     printf("Creating Joint 2 precision motor...\n");
     PrecisionMotor joint2_motor(JOINT2_MOTOR_ENA, JOINT2_MOTOR_IN1, JOINT2_MOTOR_IN2,
                                JOINT2_ENCODER_A, JOINT2_ENCODER_B, 
-                               64, 50.0f, 0.05f, 0.2332f, 0.35f, 0.0000125f);   // 64 ticks/rev, 50:1 gear ratio
+                               64, 50.0f, 0.025f, 0.3f, 0.8f, 0.0000125f,
+                            10.0f, 5.2f, 0.001f);   // 64 ticks/rev, 50:1 gear ratio
     
     // Create limit switches for joint 2
     printf("Creating Joint 2 limit switches...\n");
@@ -280,7 +281,7 @@ int main() {
         uint64_t current_time = to_ms_since_boot(get_absolute_time());
         
         // FAST CONTROL LOOP - 50ms (20Hz)
-        if (current_time - last_time_fast >= 50) {
+        if (current_time - last_time_fast >= 25) {
             
             // Update joint states (this will update position, speed, and run control)
 #ifdef TEST_JOINT1
@@ -292,10 +293,10 @@ int main() {
             
             last_time_fast = current_time;
         }
-        
-        // STATUS DISPLAY - 1000ms (1Hz)
-        if (current_time - last_time_status >= 1000) {
-            
+
+        // STATUS DISPLAY - 100ms (10Hz)
+        if (current_time - last_time_status >= 200) {
+
             printf("\n=== Individual Joint Status ===\n");
 #ifdef TEST_JOINT1
             printf("Joint1: Pos=%.2f°, Speed=%.2f°/s, Target=%.2f°, Error=%.2f°\n",
@@ -347,7 +348,7 @@ int main() {
                     joint1.set_joint(45.0f);
 #endif
 #ifdef TEST_JOINT2
-                    joint2.set_joint(30.0f);
+                    joint2.set_joint(100.0f);
 #endif
 #ifdef TEST_JOINT3
                     joint3.setPosition(-10.0f);
@@ -360,7 +361,7 @@ int main() {
                     joint1.set_joint(-30.0f);
 #endif
 #ifdef TEST_JOINT2
-                    joint2.set_joint(-45.0f);
+                    joint2.set_joint(-100.0f);
 #endif
 #ifdef TEST_JOINT3
                     joint3.setPosition(-50.0f);
