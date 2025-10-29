@@ -9,8 +9,8 @@
 // Test configuration defines - comment/uncomment to enable/disable tests
 // NOTE: TEST_FULL_SCARA is mutually exclusive with individual joint tests
 // #define TEST_FULL_SCARA
-// #define TEST_JOINT1
-#define TEST_JOINT2  
+#define TEST_JOINT1
+// #define TEST_JOINT2  
 // #define TEST_JOINT3
 
 // SCARA Robot configuration
@@ -213,7 +213,7 @@ int main() {
     printf("Creating Joint 1 precision motor...\n");
     PrecisionMotor joint1_motor(JOINT1_MOTOR_ENA, JOINT1_MOTOR_IN1, JOINT1_MOTOR_IN2,
                                JOINT1_ENCODER_A, JOINT1_ENCODER_B, 
-                               64, 50.0f, 0.05f, 0.2332f, 0.35f, 0.0000125f);  // 64 ticks/rev, 50:1 gear ratio
+                               64, 50.0f, 0.025f, 0.2332f, 0.35f, 0.0000125f);  // 64 ticks/rev, 50:1 gear ratio
     
     // Create limit switches for joint 1
     printf("Creating Joint 1 limit switches...\n");
@@ -223,7 +223,7 @@ int main() {
     // Create SCARA joint 1
     printf("Creating SCARA Joint 1...\n");
     Joint joint1('R', -85.0f, 85.0f, &joint1_motor, 4.0f, 
-                 &joint1_limit_min, &joint1_limit_max, 1.0f);  // Joint 1: ±85° with 4:1 joint ratio
+                 &joint1_limit_min, &joint1_limit_max, 6.8f);  // Joint 1: ±85° with 4:1 joint ratio
 #endif
 
 #ifdef TEST_JOINT2
@@ -231,7 +231,7 @@ int main() {
     printf("Creating Joint 2 precision motor...\n");
     PrecisionMotor joint2_motor(JOINT2_MOTOR_ENA, JOINT2_MOTOR_IN1, JOINT2_MOTOR_IN2,
                                JOINT2_ENCODER_A, JOINT2_ENCODER_B, 
-                               64, 50.0f, 0.025f, 0.3f, 0.6f, 0.0000125f);   // 64 ticks/rev, 50:1 gear ratio
+                               64, 50.0f, 0.025f, 0.3f, 0.6f, 0.0000125f);  // 64 ticks/rev, 50:1 gear ratio
     
     // Create limit switches for joint 2
     printf("Creating Joint 2 limit switches...\n");
@@ -241,7 +241,7 @@ int main() {
     // Create SCARA joint 2
     printf("Creating SCARA Joint 2...\n");
     Joint joint2('R', -120.0f, 120.0f, &joint2_motor, 4.0f, 
-                 &joint2_limit_min, &joint2_limit_max,  1.0f);   // Joint 2: ±120° with 4:1 joint ratio
+                 &joint2_limit_min, &joint2_limit_max,  6.5f);   // Joint 2: ±120° with 4:1 joint ratio
 #endif
 
 #ifdef TEST_JOINT3

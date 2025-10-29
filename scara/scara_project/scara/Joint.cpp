@@ -389,7 +389,7 @@ float Joint::position_control_internal(float current_pos, float desired_pos) {
             // Reset error history when stopped to ensure clean start on next movement
             error_pos[1] = 0.0f;
         } else if (fabs(error) < 2) {
-            position_control_output = (error < 0) ? -6.5 : 6.5;
+            position_control_output = (error < 0) ? -resistance : resistance;
         } else if (fabs(error) < 10) {
             position_control_output = (error < 0) ? -7 : 7;
         } else if (fabs(error) < 15) {
@@ -400,7 +400,7 @@ float Joint::position_control_internal(float current_pos, float desired_pos) {
     }
 
     // Apply speed scaling for synchronized motion
-    return position_control_output * resistance * speed_scale_factor;
+    return position_control_output * speed_scale_factor;
 }
 
 void Joint::move_to_position_internal(float target_motor_degrees, float max_speed) {
