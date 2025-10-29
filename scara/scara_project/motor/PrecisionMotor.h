@@ -16,7 +16,6 @@ private:
     // PID controller variables
     float Kp, Ti, Td;
     float dt;                  // Time step for PID calculations
-    float dead_zone = 0.5f; // Dead zone for control output
     
     // PID coefficients (calculated from Kp, Ti, Td)
     float q0, q1, q2;
@@ -56,8 +55,7 @@ public:
     PrecisionMotor(uint ena_pin, uint in1_pin, uint in2_pin,
                    uint enc_a_pin, uint enc_b_pin, 
                    int ticks_per_rev = 28, float gear_ratio = 150.0f, float dt = 0.1f,
-                   float kp = 0.7458f, float ti = 0.5000f, float td = 2.5000e-05f, 
-                   float dead_zone = 4.0f);
+                   float kp = 0.7458f, float ti = 0.5000f, float td = 2.5000e-05f);
 
     // Precision motor control methods
     void set_motor(float desired_speed);
