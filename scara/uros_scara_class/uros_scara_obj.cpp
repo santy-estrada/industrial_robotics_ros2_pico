@@ -61,7 +61,7 @@ ScaraRobot* g_scara_robot = nullptr;
 #define SCARA_CONF_TOPIC "scara_conf"
 
 // Timing configuration
-#define CONTROL_TIMER_PERIOD_MS 50    // 20Hz control loop
+#define CONTROL_TIMER_PERIOD_MS 25    // 40Hz control loop
 #define PUBLISHER_TIMER_PERIOD_MS 100 // 10Hz measurements publishing
 #define DEBUG_TIMER_PERIOD_MS 500     // 2Hz debug publishing
 

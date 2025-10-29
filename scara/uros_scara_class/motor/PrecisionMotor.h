@@ -65,6 +65,9 @@ public:
     //Reset encoder ticks to set a new origin
     void reset_encoder_ticks();
     
+    //Reset PID state (clear error history and control output)
+    void reset_pid_state();
+    
     // Getters
     float get_setpoint() const;
     float get_control_output() const;

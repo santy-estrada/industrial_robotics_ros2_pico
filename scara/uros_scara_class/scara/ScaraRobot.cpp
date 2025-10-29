@@ -23,7 +23,7 @@ ScaraRobot::ScaraRobot(
     printf("Creating Joint 1 precision motor...\n");
     joint1_motor = new PrecisionMotor(j1_motor_ena, j1_motor_in1, j1_motor_in2,
                                      j1_encoder_a, j1_encoder_b, 
-                                     64, 50.0f, 0.05f, 0.2332f, 0.35f, 0.0000125f);
+                                     64, 50.0f, 0.025f, 0.2332f, 0.35f, 0.0000125f);
     
     // Create limit switches for joint 1
     printf("Creating Joint 1 limit switches...\n");
@@ -33,13 +33,13 @@ ScaraRobot::ScaraRobot(
     // Create SCARA joint 1
     printf("Creating SCARA Joint 1...\n");
     joint1 = new Joint('R', -80.0f, 80.0f, joint1_motor, 4.0f, 
-                       joint1_limit_min, joint1_limit_max, 1.5f);
+                       joint1_limit_min, joint1_limit_max, 6.8f);
     
     // Create precision motor for joint 2
     printf("Creating Joint 2 precision motor...\n");
     joint2_motor = new PrecisionMotor(j2_motor_ena, j2_motor_in1, j2_motor_in2,
                                      j2_encoder_a, j2_encoder_b, 
-                                     64, 50.0f, 0.05f, 0.2332f, 0.35f, 0.0000125f);
+                                     64, 50.0f, 0.025f, 0.3f, 0.6f, 0.0000125f);
     
     // Create limit switches for joint 2
     printf("Creating Joint 2 limit switches...\n");
@@ -49,7 +49,7 @@ ScaraRobot::ScaraRobot(
     // Create SCARA joint 2
     printf("Creating SCARA Joint 2...\n");
     joint2 = new Joint('R', -120.0f, 120.0f, joint2_motor, 4.0f, 
-                       joint2_limit_min, joint2_limit_max, 1.8f);
+                       joint2_limit_min, joint2_limit_max, 6.5f);
     
     // Create servo motor and servo joint for joint 3
     printf("Creating Joint 3 servo motor and servo joint...\n");

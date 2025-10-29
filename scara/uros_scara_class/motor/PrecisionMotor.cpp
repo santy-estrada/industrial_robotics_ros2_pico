@@ -163,6 +163,19 @@ void PrecisionMotor::reset_encoder_ticks() {
     filtered_rpm = 0.0f;
 }
 
+void PrecisionMotor::reset_pid_state() {
+    // Clear error history
+    error[0] = 0.0f;
+    error[1] = 0.0f;
+    error[2] = 0.0f;
+    
+    // Reset control output (prevents integral windup)
+    control_output = 0.0f;
+    
+    // Clear filtered velocity
+    filtered_rpm = 0.0f;
+}
+
 float PrecisionMotor::get_setpoint() const { 
     return setpoint_percentage; 
 }
