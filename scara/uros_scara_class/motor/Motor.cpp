@@ -12,7 +12,7 @@ Motor::Motor(uint ena_pin, uint in1_pin, uint in2_pin)
     // Set up PWM for speed control
     gpio_set_function(ENA_PIN, GPIO_FUNC_PWM);
     pwmSlice = pwm_gpio_to_slice_num(ENA_PIN);
-    pwm_set_wrap(pwmSlice, 12499);  // 10kHz PWM frequency
+    pwm_set_wrap(pwmSlice, 6249);  // 20kHz PWM frequency
     pwm_set_chan_level(pwmSlice, PWM_CHAN_A, 0);
     pwm_set_enabled(pwmSlice, true);
     
