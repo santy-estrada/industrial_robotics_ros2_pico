@@ -1,5 +1,5 @@
 #include "PrecisionMotor.h"
-#include <stdio.h>
+#include <cstdio>
 
 // Initialize static members
 std::map<uint, PrecisionMotor*> PrecisionMotor::motor_map;
@@ -18,17 +18,13 @@ void PrecisionMotor::encoder_irq_handler(uint gpio, uint32_t events) {
 PrecisionMotor::PrecisionMotor(uint ena_pin, uint in1_pin, uint in2_pin,
                                uint enc_a_pin, uint enc_b_pin,
                                int ticks_per_rev, float gear_ratio,float dt,
-                               float kp, float ti, float td,
-                               float dz_start, float dz_running, float dz_stop)
+                               float kp, float ti, float td, float dead_zone)
     : Motor(ena_pin, in1_pin, in2_pin),
       ENCODER_A_PIN(enc_a_pin), ENCODER_B_PIN(enc_b_pin),
       TICKS_PER_REV(ticks_per_rev), GEAR_RATIO(gear_ratio), dt(dt),
-      Kp(kp), Ti(ti), Td(td),
+      Kp(kp), Ti(ti), Td(td), dead_zone(dead_zone),
       encoder_ticks(0), last_ticks(0), filtered_rpm(0.0f), 
-      setpoint_percentage(0.0f), control_output(0.0f),
-      dead_zone_start(dz_start), dead_zone_running(dz_running), 
-      dead_zone_stop(dz_stop) {
-    
+      setpoint_percentage(0.0f), control_output(0.0f) {
     
     // Initialize error array
     for (int i = 0; i < 3; i++) {
@@ -119,29 +115,26 @@ void PrecisionMotor::set_motor(float desired_speed) {
     float revs = 0.0f;
     
     calculate_rpm(&revs, &measured_speed); // Update measured_speed with current
-    // printf("Measured Speed: %.2f RPM\n", measured_speed);
 
     set_setpoint(desired_speed);
     
     // Calculate control signal using PID
     float u = calculate_pid_control(measured_speed);
     
-    // Apply dead zone compensation
-    float u_compensated = apply_dead_zone_compensation(u);
-    
-    // Store the control output (with sign) for reporting and next iteration
-    control_output = u;  // Store uncompensated for PID continuity
-    // printf("Control Output: %.2f -> Compensated: %.2f\n", u, u_compensated);
+    // Store the control output for next iteration
+    control_output = u;
 
-    // Set direction and apply compensated control
-    if (u_compensated > 0) {
-        moveFwd(u_compensated);  // Move forward with positive PWM
-    } else if (u_compensated < 0) {
-        moveBckwd(-u_compensated); // Move backward with positive PWM (negate the negative u)
+    // Print for debugging
+    printf("Setpoint: %.2f%% (%.2f RPM), Measured: %.2f RPM, Control Output: %.2f%%, Error: %.2f%%\n", 
+           setpoint_percentage, desired_speed, measured_speed, control_output, error[0]);
+
+    // Set direction and apply control
+    if (u > 0) {
+        moveFwd(u);  // Move forward with positive PWM
+    } else if (u < 0) {
+        moveBckwd(-u); // Move backward with positive PWM (negate the negative u)
     } else {
         stop();
-        control_output = 0.0f;  // Reset control output on stop
-        is_moving = false;    // Update motor state
     }
     
     // The Motor class methods (moveFwd/moveBckwd) already handle PWM setting
@@ -156,40 +149,11 @@ void PrecisionMotor::calculate_rpm(float* revs, float* rpm) {
 
     float raw_rpm = ((float)ticks_since_last / TICKS_PER_REV) * (60.0f / dt) * (1.0f / GEAR_RATIO);
     *rpm = apply_low_pass_filter(raw_rpm);
-    // *rpm = raw_rpm; // Bypass filtering for now
-    // printf("dt: %.3f, ticks_since_last: %ld, raw_rpm: %.2f\n", dt, ticks_since_last, raw_rpm);
 }
 
 float PrecisionMotor::apply_low_pass_filter(float raw_rpm) {
     filtered_rpm = alpha * raw_rpm + (1.0f - alpha) * filtered_rpm;
     return filtered_rpm;
-}
-
-float PrecisionMotor::apply_dead_zone_compensation(float u) {
-    float abs_u = fabs(u);
-    
-    // Simplified dead zone compensation strategy:
-    // 1. If stopped and command > threshold: apply breakaway torque once
-    // 2. Once moving: pass PID commands through directly (no minimum enforcement)
-    // 3. If command drops to zero: stop
-    
-    // Check if we should stop
-    if (abs_u <= dead_zone_stop) {
-        return 0.0f;  // Force stop (Motor::stop() will set is_moving=false)
-    }
-    
-    // Apply dead zone compensation only when starting from stopped state
-    if (!is_moving && abs_u > dead_zone_stop) {
-        // Motor is stopped and needs to start - apply breakaway torque
-        float compensated_u = (u > 0) ? dead_zone_start : -dead_zone_start;
-        // printf("Motor starting: breakaway PWM = %.2f%%\n", compensated_u);
-        return compensated_u;
-        // Note: is_moving will be set to true by moveFwd()/moveBckwd()
-    }
-    
-    // Motor is already moving - use PID output directly without minimum enforcement
-    // This allows fine control for position tracking
-    return u;
 }
 
 void PrecisionMotor::set_setpoint(float rpm) {
@@ -215,8 +179,6 @@ void PrecisionMotor::reset_pid_state() {
     
     // Clear filtered velocity
     filtered_rpm = 0.0f;
-    
-    // printf("PID state reset\n");
 }
 
 float PrecisionMotor::get_setpoint() const { 

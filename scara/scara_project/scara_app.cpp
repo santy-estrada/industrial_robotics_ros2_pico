@@ -231,8 +231,7 @@ int main() {
     printf("Creating Joint 2 precision motor...\n");
     PrecisionMotor joint2_motor(JOINT2_MOTOR_ENA, JOINT2_MOTOR_IN1, JOINT2_MOTOR_IN2,
                                JOINT2_ENCODER_A, JOINT2_ENCODER_B, 
-                               64, 50.0f, 0.025f, 0.3f, 0.8f, 0.0000125f,
-                            10.0f, 5.2f, 0.001f);   // 64 ticks/rev, 50:1 gear ratio
+                               64, 50.0f, 0.025f, 0.3f, 0.6f, 0.0000125f);   // 64 ticks/rev, 50:1 gear ratio
     
     // Create limit switches for joint 2
     printf("Creating Joint 2 limit switches...\n");
@@ -326,7 +325,7 @@ int main() {
         }
         
         // TEST SEQUENCE - Move joints through predefined positions
-        if (current_time - test_sequence_time >= 10000) {  // Change every 10 seconds
+        if (current_time - test_sequence_time >= 15000) {  // Change every 10 seconds
             
             switch (test_phase) {
                 case 0:
@@ -348,7 +347,7 @@ int main() {
                     joint1.set_joint(45.0f);
 #endif
 #ifdef TEST_JOINT2
-                    joint2.set_joint(100.0f);
+                    joint2.set_joint(70.0f);
 #endif
 #ifdef TEST_JOINT3
                     joint3.setPosition(-10.0f);
@@ -361,7 +360,7 @@ int main() {
                     joint1.set_joint(-30.0f);
 #endif
 #ifdef TEST_JOINT2
-                    joint2.set_joint(-100.0f);
+                    joint2.set_joint(-70.0f);
 #endif
 #ifdef TEST_JOINT3
                     joint3.setPosition(-50.0f);

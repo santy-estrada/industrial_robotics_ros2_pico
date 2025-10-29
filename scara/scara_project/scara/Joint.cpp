@@ -130,7 +130,6 @@ bool Joint::calibrateOrigin() {
         
         motor->set_motor(0.0f);
         motor->stop();
-        motor->reset_pid_state();  // Clear PID integral windup
         sleep_ms(500);
         
         min_positions[i] = motor->get_position_degrees();
@@ -151,7 +150,6 @@ bool Joint::calibrateOrigin() {
         
         motor->set_motor(0.0f);
         motor->stop();
-        motor->reset_pid_state();  // Clear PID integral windup
         sleep_ms(500);
 
         max_positions[i] = motor->get_position_degrees();
@@ -391,17 +389,13 @@ float Joint::position_control_internal(float current_pos, float desired_pos) {
             // Reset error history when stopped to ensure clean start on next movement
             error_pos[1] = 0.0f;
         } else if (fabs(error) < 2) {
-            position_control_output = (error < 0) ? -5 : 5;
-        } else if (fabs(error) < 5) {
-            position_control_output = (error < 0) ? -7 : 7;
+            position_control_output = (error < 0) ? -6.5 : 6.5;
         } else if (fabs(error) < 10) {
-            position_control_output = (error < 0) ? -10 : 10;
+            position_control_output = (error < 0) ? -7 : 7;
         } else if (fabs(error) < 15) {
-            position_control_output = (error < 0) ? -18 : 18;
-        } else if (fabs(error) < 25) {
-            position_control_output = (error < 0) ? -25 : 25;
+            position_control_output = (error < 0) ? -10 : 10;
         } else {
-            position_control_output = (error < 0) ? -40 : 40;
+            position_control_output = (error < 0) ? -12 : 12;
         }
     }
 
@@ -468,8 +462,8 @@ void Joint::set_joint(float desired_position) {
         if (u != 0.0f) {
             motor->set_motor(u);
         } else {
-            motor->set_motor(0.0f);
             motor->stop();
+            motor->reset_pid_state();  // Clear PID state when stopped at target
         }
     } else if (limits_violated) {
         // Stop motor if limits are violated
@@ -491,8 +485,8 @@ void Joint::set_joint() {
         if (u != 0.0f) {
             motor->set_motor(u);
         } else {
-            motor->set_motor(0.0f);
             motor->stop();
+            motor->reset_pid_state();  // Clear PID state when stopped at target
         }
     } else if (limits_violated) {
         // Stop motor if limits are violated

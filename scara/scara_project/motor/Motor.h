@@ -13,7 +13,6 @@ protected:
     
     uint pwmSlice;       // PWM slice for motor control
     float PWM_POWER;     // Current PWM power (0-100%)
-    bool is_moving;      // Track if motor is currently moving
 
 public:
     // Constructor
@@ -27,9 +26,6 @@ public:
     // Power control methods
     float getPwmPower() const;
     void setPwmPower(float power);
-    
-    // State query methods
-    bool isMoving() const;
 
 private:
     // Helper method to apply PWM power

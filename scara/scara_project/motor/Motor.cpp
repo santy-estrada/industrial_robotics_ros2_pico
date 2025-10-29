@@ -1,7 +1,7 @@
 #include "Motor.h"
 
 Motor::Motor(uint ena_pin, uint in1_pin, uint in2_pin)
-    : ENA_PIN(ena_pin), IN1_PIN(in1_pin), IN2_PIN(in2_pin), PWM_POWER(0.0f), is_moving(false) {
+    : ENA_PIN(ena_pin), IN1_PIN(in1_pin), IN2_PIN(in2_pin), PWM_POWER(0.0f) {
     
     // Initialize direction control pins
     gpio_init(IN1_PIN);
@@ -12,7 +12,7 @@ Motor::Motor(uint ena_pin, uint in1_pin, uint in2_pin)
     // Set up PWM for speed control
     gpio_set_function(ENA_PIN, GPIO_FUNC_PWM);
     pwmSlice = pwm_gpio_to_slice_num(ENA_PIN);
-    pwm_set_wrap(pwmSlice, 12499);  // 10kHz PWM frequency
+    pwm_set_wrap(pwmSlice, 6249);  // 20kHz PWM frequency
     pwm_set_chan_level(pwmSlice, PWM_CHAN_A, 0);
     pwm_set_enabled(pwmSlice, true);
     
@@ -25,7 +25,6 @@ void Motor::moveFwd(float power) {
     gpio_put(IN1_PIN, 1);
     gpio_put(IN2_PIN, 0);
     applyPwmPower();
-    is_moving = true;  // Mark motor as moving
 }
 
 void Motor::moveBckwd(float power) {
@@ -33,7 +32,6 @@ void Motor::moveBckwd(float power) {
     gpio_put(IN1_PIN, 0);
     gpio_put(IN2_PIN, 1);
     applyPwmPower();
-    is_moving = true;  // Mark motor as moving
 }
 
 void Motor::stop() {
@@ -41,7 +39,6 @@ void Motor::stop() {
     gpio_put(IN2_PIN, 0);
     setPwmPower(0.0f);
     applyPwmPower();
-    is_moving = false;  // Mark motor as stopped
 }
 
 float Motor::getPwmPower() const {
@@ -53,10 +50,6 @@ void Motor::setPwmPower(float power) {
     if (power < 0.0f) power = 0.0f;
     if (power > 100.0f) power = 100.0f;
     PWM_POWER = power;
-}
-
-bool Motor::isMoving() const {
-    return is_moving;
 }
 
 void Motor::applyPwmPower() {
